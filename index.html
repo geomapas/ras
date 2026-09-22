@@ -41,11 +41,6 @@
           <button id="btn-view-gest" onclick="switchRoleView('gestor')" class="px-3 py-1.5 rounded-md text-emerald-200 hover:text-white">Gestor</button>
         </div>
 
-        <!-- Visor PWA -->
-        <button onclick="toggleCodeModal()" class="p-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-emerald-100 transition shadow" title="Archivos PWA">
-          <i data-lucide="code" class="w-5 h-5"></i>
-        </button>
-
         <!-- Cerrar Sesión -->
         <button id="btn-logout" onclick="handleLogout()" class="hidden p-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-white transition shadow" title="Cerrar sesión">
           <i data-lucide="log-out" class="w-5 h-5"></i>
@@ -70,7 +65,7 @@
           <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo Electrónico</label>
           <div class="relative">
             <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
-            <input type="email" id="login-email" required class="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50" placeholder="usuario@empresa.es">
+            <input type="email" id="login-email" required class="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50" placeholder="usuario@geacam.com">
           </div>
         </div>
         <div>
@@ -225,7 +220,7 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Técnico Asignado (Email)</label>
-                <input type="email" id="ot-tech-email" required placeholder="tecnico@empresa.es" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50">
+                <input type="email" id="ot-tech-email" required placeholder="tecnico@geacam.com" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50">
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Recintos Asignados</label>
@@ -287,28 +282,13 @@
     </section>
   </main>
 
-  <!-- Modal PWA Code -->
-  <div id="modal-code" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-      <div class="bg-emerald-800 text-white p-4 flex justify-between items-center">
-        <h3 class="font-bold text-sm">Configuración PWA del Proyecto</h3>
-        <button onclick="toggleCodeModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
-      </div>
-      <div class="p-3 bg-slate-100 border-b flex gap-2 text-xs font-bold">
-        <button onclick="showPwaCode('manifest')" class="px-3 py-1 bg-emerald-700 text-white rounded">manifest.json</button>
-        <button onclick="showPwaCode('sw')" class="px-3 py-1 bg-slate-200 text-slate-700 rounded">sw.js</button>
-      </div>
-      <pre id="code-viewer" class="p-4 text-xs font-mono bg-slate-900 text-emerald-400 overflow-auto flex-1"></pre>
-    </div>
-  </div>
-
   <!-- INTEGRACIÓN FIREBASE SDK V10 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, getDoc, updateDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Configuración Firebase configurada con tu proyecto ras-geacam
+    // Configuración Firebase con tu proyecto ras-geacam
     const firebaseConfig = {
       apiKey: "AIzaSyDgq3wxMrFKQ-1SmSLUxbwyZU6ETAQjzys",
       authDomain: "ras-geacam.firebaseapp.com",
@@ -321,6 +301,12 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+
+    // Lista de correos autorizados como Gestores
+    const GESTOR_EMAILS = [
+      'sgonzalez@geacam.com',
+      'arojo@geacam.com'
+    ];
 
     let currentUser = null;
     let userRole = 'tecnico';
@@ -345,16 +331,22 @@
         currentUser = user;
         document.getElementById('user-display-email').innerText = user.email;
 
-        try {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            userRole = userDoc.data().role || 'tecnico';
-          } else {
+        // Verificar si el usuario es uno de los gestores designados
+        const emailLower = user.email.toLowerCase().trim();
+        if (GESTOR_EMAILS.includes(emailLower)) {
+          userRole = 'gestor';
+        } else {
+          try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+              userRole = userDoc.data().role || 'tecnico';
+            } else {
+              userRole = 'tecnico';
+            }
+          } catch (e) {
+            console.warn("Error leyendo rol:", e);
             userRole = 'tecnico';
           }
-        } catch (e) {
-          console.warn("Error leyendo rol:", e);
-          userRole = 'tecnico';
         }
 
         document.getElementById('sec-login').classList.add('hidden');
@@ -599,13 +591,6 @@
         if (!opt.value) return;
         opt.style.display = opt.innerText.toLowerCase().includes(text) ? '' : 'none';
       });
-    };
-
-    window.toggleCodeModal = () => document.getElementById('modal-code').classList.toggle('hidden');
-    window.showPwaCode = (type) => {
-      document.getElementById('code-viewer').innerText = type === 'manifest' 
-        ? '{"short_name":"RAS","name":"RAS PWA","start_url":"./index.html","display":"standalone"}'
-        : 'self.addEventListener("fetch", (e) => e.respondWith(caches.match(e.request) || fetch(e.request)));';
     };
   </script>
 </body>
