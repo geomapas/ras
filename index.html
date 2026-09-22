@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RAS - Control de Campo y Ordenes de Trabajo</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#15803d">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .ot-completed-option {
+      background-color: #dcfce7 !important;
+      color: #15803d !important;
+      font-weight: 700 !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col">
+
+  <!-- Header Principal -->
+  <header class="bg-emerald-800 text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="bg-emerald-600 p-2 rounded-xl font-black text-xl tracking-wider shadow border border-emerald-500">RAS</div>
+        <div>
+          <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+            Control de Campo
+            <span id="sync-indicator" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="Sincronizado"></span>
+          </h1>
+          <p id="user-display-email" class="text-xs text-emerald-200">No autenticado</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <!-- Switcher Técnico / Gestor -->
+        <div id="role-switcher" class="hidden bg-emerald-900/80 p-1 rounded-lg border border-emerald-700/50 flex text-xs font-semibold">
+          <button id="btn-view-tech" onclick="switchRoleView('tecnico')" class="px-3 py-1.5 rounded-md bg-emerald-600 text-white shadow">Técnico</button>
+          <button id="btn-view-gest" onclick="switchRoleView('gestor')" class="px-3 py-1.5 rounded-md text-emerald-200 hover:text-white">Gestor</button>
+        </div>
+
+        <!-- Visor PWA -->
+        <button onclick="toggleCodeModal()" class="p-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-emerald-100 transition shadow" title="Archivos PWA">
+          <i data-lucide="code" class="w-5 h-5"></i>
+        </button>
+
+        <!-- Cerrar Sesión -->
+        <button id="btn-logout" onclick="handleLogout()" class="hidden p-2 bg-red-600/80 hover:bg-red-600 rounded-lg text-white transition shadow" title="Cerrar sesión">
+          <i data-lucide="log-out" class="w-5 h-5"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6">
+
+    <!-- VISTA: LOGIN -->
+    <section id="sec-login" class="max-w-md mx-auto my-12 bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+      <div class="text-center mb-8">
+        <div class="w-20 h-20 bg-emerald-100 text-emerald-700 rounded-3xl flex items-center justify-center mx-auto mb-4 font-black text-3xl shadow-inner border border-emerald-200">RAS</div>
+        <h2 class="text-2xl font-bold text-slate-800">Acceso a la Plataforma</h2>
+        <p class="text-xs text-slate-500 mt-1">Introduce tus credenciales de usuario</p>
+      </div>
+
+      <form id="form-login" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Correo Electrónico</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="email" id="login-email" required class="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50" placeholder="usuario@empresa.es">
+          </div>
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">Contraseña</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="password" id="login-password" required class="w-full pl-9 pr-3 py-2.5 border rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50" placeholder="••••••••">
+          </div>
+        </div>
+        <div id="login-error" class="hidden text-xs text-red-600 font-semibold bg-red-50 p-2.5 rounded-lg border border-red-200"></div>
+        <button type="submit" class="w-full py-3 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-xl shadow-lg transition text-sm flex items-center justify-center gap-2">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Entrar
+        </button>
+      </form>
+    </section>
+
+    <!-- VISTA: TÉCNICO -->
+    <section id="sec-tecnico" class="hidden max-w-2xl mx-auto space-y-5">
+      <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex items-center justify-between">
+          <label class="block text-xs font-bold text-slate-600 uppercase tracking-wider">Selección de Orden de Trabajo (OT)</label>
+          <span class="text-xs text-emerald-600 font-medium flex items-center gap-1"><i data-lucide="wifi" class="w-3.5 h-3.5"></i> Conectado a Firestore</span>
+        </div>
+
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+          <input type="text" id="ot-search-input" oninput="filterOTOptions()" placeholder="Buscar OT por texto..." class="w-full pl-9 pr-3 py-2 border rounded-xl text-xs focus:ring-2 focus:ring-emerald-500 outline-none bg-slate-50">
+        </div>
+
+        <select id="ot-select" onchange="selectOT(this.value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-slate-50 focus:ring-2 focus:ring-emerald-500 outline-none text-slate-800">
+          <option value="">-- Carga de OTs en curso... --</option>
+        </select>
+      </div>
+
+      <!-- Ficha OT -->
+      <div id="ot-card" class="hidden bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden space-y-4 p-5">
+        <div class="flex justify-between items-start border-b pb-4">
+          <div>
+            <h3 id="ot-card-title" class="font-bold text-xl text-slate-800">OT-000</h3>
+            <p id="ot-card-subtitle" class="text-xs text-slate-500 font-medium">Provincia</p>
+          </div>
+          <span id="ot-card-badge" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-amber-100 text-amber-800">En Progreso</span>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
+            <span class="block text-xs font-semibold text-slate-400 uppercase">Totales</span>
+            <span id="ot-total-val" class="text-xl font-black text-slate-700">0</span>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded-xl border border-emerald-100 text-center">
+            <span class="block text-xs font-semibold text-emerald-600 uppercase">Revisados</span>
+            <span id="ot-visited-val" class="text-xl font-black text-emerald-700">0</span>
+          </div>
+          <div class="bg-amber-50 p-3 rounded-xl border border-amber-100 text-center">
+            <span class="block text-xs font-semibold text-amber-600 uppercase">Pendientes</span>
+            <span id="ot-pending-val" class="text-xl font-black text-amber-700">0</span>
+          </div>
+        </div>
+
+        <!-- Formulario Registro -->
+        <form id="form-daily" class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3">
+          <h4 class="font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+            <i data-lucide="plus-circle" class="w-4 h-4 text-emerald-600"></i> Nuevo Registro de Visita
+          </h4>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Fecha</label>
+              <input type="date" id="reg-date" required class="w-full px-3 py-2 border rounded-lg text-xs bg-white font-medium">
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-600 mb-1">Recintos Pendientes Restantes</label>
+              <input type="number" id="reg-pending" min="0" required placeholder="Poner 0 si termina" class="w-full px-3 py-2 border rounded-lg text-xs font-bold bg-white focus:ring-2 focus:ring-emerald-500">
+            </div>
+          </div>
+          <button type="submit" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
+            <i data-lucide="save" class="w-4 h-4"></i> Guardar Registro Diario
+          </button>
+        </form>
+
+        <div class="pt-2">
+          <h4 class="font-bold text-xs text-slate-600 uppercase tracking-wider mb-2">Historial de Registros</h4>
+          <div id="ot-history-container" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VISTA: GESTOR -->
+    <section id="sec-gestor" class="hidden space-y-6">
+      <div class="flex border-b border-slate-200 gap-2">
+        <button id="tab-btn-plan" onclick="switchGestorSubTab('plan')" class="px-5 py-2.5 font-bold text-sm border-b-2 border-emerald-600 text-emerald-800 flex items-center gap-2">
+          <i data-lucide="folder-plus" class="w-4 h-4"></i> Planificación y OTs
+        </button>
+        <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2">
+          <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Estadísticas e Informes (CST/RQNM)
+        </button>
+      </div>
+
+      <!-- PLANIFICACIÓN -->
+      <div id="subtab-plan" class="grid md:grid-cols-2 gap-6">
+        <!-- Crear Campaña Regional -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+          <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+            <i data-lucide="map-pin" class="w-5 h-5 text-emerald-600"></i> Nueva Campaña Regional (Castilla-La Mancha)
+          </h3>
+          <form id="form-campaign" class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nombre Campaña</label>
+              <input type="text" id="camp-name" required placeholder="Ej: PAC 2026 RQNM FEADER" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50">
+            </div>
+            <label class="block text-xs font-bold text-slate-700 pt-1">Desglose Recintos por Provincia:</label>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <div><span class="text-slate-500">Albacete</span><input type="number" min="0" id="c-alb" value="0" oninput="calcCampTotal()" class="w-full p-2 border rounded-lg bg-slate-50 font-bold"></div>
+              <div><span class="text-slate-500">Ciudad Real</span><input type="number" min="0" id="c-cr" value="0" oninput="calcCampTotal()" class="w-full p-2 border rounded-lg bg-slate-50 font-bold"></div>
+              <div><span class="text-slate-500">Cuenca</span><input type="number" min="0" id="c-cu" value="0" oninput="calcCampTotal()" class="w-full p-2 border rounded-lg bg-slate-50 font-bold"></div>
+              <div><span class="text-slate-500">Guadalajara</span><input type="number" min="0" id="c-gu" value="0" oninput="calcCampTotal()" class="w-full p-2 border rounded-lg bg-slate-50 font-bold"></div>
+              <div class="col-span-2"><span class="text-slate-500">Toledo</span><input type="number" min="0" id="c-to" value="0" oninput="calcCampTotal()" class="w-full p-2 border rounded-lg bg-slate-50 font-bold"></div>
+            </div>
+            <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl flex justify-between items-center text-xs font-bold text-emerald-900">
+              <span>Total Regional:</span>
+              <span id="camp-total-sum">0 Recintos</span>
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition">Crear Campaña</button>
+          </form>
+        </div>
+
+        <!-- Crear OT -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+          <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+            <i data-lucide="file-plus" class="w-5 h-5 text-emerald-600"></i> Generar Orden de Trabajo (OT)
+          </h3>
+          <form id="form-ot" class="space-y-3">
+            <div>
+              <label class="block text-xs font-bold text-slate-600 mb-1">Nombre/Código OT</label>
+              <input type="text" id="ot-code" required placeholder="Ej: OT-ALB-2026-01" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Campaña</label>
+                <select id="ot-camp-sel" required class="w-full p-2 border rounded-xl text-xs bg-slate-50"></select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Provincia</label>
+                <select id="ot-prov-sel" required class="w-full p-2 border rounded-xl text-xs bg-slate-50">
+                  <option value="Albacete">Albacete</option>
+                  <option value="Ciudad Real">Ciudad Real</option>
+                  <option value="Cuenca">Cuenca</option>
+                  <option value="Guadalajara">Guadalajara</option>
+                  <option value="Toledo">Toledo</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Técnico Asignado (Email)</label>
+                <input type="email" id="ot-tech-email" required placeholder="tecnico@empresa.es" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50">
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Recintos Asignados</label>
+                <input type="number" id="ot-recintos" min="1" required placeholder="Ej: 200" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50 font-bold">
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition">Generar OT</button>
+          </form>
+        </div>
+      </div>
+
+      <!-- INFORMES -->
+      <div id="subtab-rep" class="hidden space-y-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-slate-400 uppercase">Recintos Totales</span>
+            <p id="kpi-tot" class="text-2xl font-black text-slate-800 mt-1">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-emerald-600 uppercase">Revisados</span>
+            <p id="kpi-rev" class="text-2xl font-black text-emerald-700 mt-1">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-amber-600 uppercase">Pendientes</span>
+            <p id="kpi-pen" class="text-2xl font-black text-amber-700 mt-1">0</p>
+          </div>
+          <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+            <span class="text-xs font-bold text-blue-600 uppercase">% Avance Global</span>
+            <p id="kpi-pct" class="text-2xl font-black text-blue-700 mt-1">0%</p>
+          </div>
+        </div>
+
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex justify-between items-center border-b pb-3">
+            <div>
+              <h3 class="font-bold text-base text-slate-800">Cuadro Resumen de Ejecución (CST / RQNM)</h3>
+              <p class="text-xs text-slate-400">Castilla-La Mancha</p>
+            </div>
+            <button onclick="window.print()" class="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold flex items-center gap-1.5">
+              <i data-lucide="printer" class="w-4 h-4"></i> Imprimir
+            </button>
+          </div>
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
+                  <th class="p-3">Provincia</th>
+                  <th class="p-3 text-right">Recintos A Controlar</th>
+                  <th class="p-3 text-right">Revisados</th>
+                  <th class="p-3 text-right">Pendientes</th>
+                  <th class="p-3 text-right">% Controlados</th>
+                </tr>
+              </thead>
+              <tbody id="cst-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Modal PWA Code -->
+  <div id="modal-code" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
+      <div class="bg-emerald-800 text-white p-4 flex justify-between items-center">
+        <h3 class="font-bold text-sm">Configuración PWA del Proyecto</h3>
+        <button onclick="toggleCodeModal()"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+      <div class="p-3 bg-slate-100 border-b flex gap-2 text-xs font-bold">
+        <button onclick="showPwaCode('manifest')" class="px-3 py-1 bg-emerald-700 text-white rounded">manifest.json</button>
+        <button onclick="showPwaCode('sw')" class="px-3 py-1 bg-slate-200 text-slate-700 rounded">sw.js</button>
+      </div>
+      <pre id="code-viewer" class="p-4 text-xs font-mono bg-slate-900 text-emerald-400 overflow-auto flex-1"></pre>
+    </div>
+  </div>
+
+  <!-- INTEGRACIÓN FIREBASE SDK V10 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, getDoc, updateDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    // Configuración Firebase configurada con tu proyecto ras-geacam
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgq3wxMrFKQ-1SmSLUxbwyZU6ETAQjzys",
+      authDomain: "ras-geacam.firebaseapp.com",
+      projectId: "ras-geacam",
+      storageBucket: "ras-geacam.firebasestorage.app",
+      messagingSenderId: "845053236217",
+      appId: "1:845053236217:web:0ef3185b767f118ccbe328"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    let currentUser = null;
+    let userRole = 'tecnico';
+    let workOrders = [];
+    let campaigns = [];
+    let currentOT = null;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      document.getElementById('reg-date').value = new Date().toISOString().split('T')[0];
+      registerSW();
+    });
+
+    function registerSW() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        document.getElementById('user-display-email').innerText = user.email;
+
+        try {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            userRole = userDoc.data().role || 'tecnico';
+          } else {
+            userRole = 'tecnico';
+          }
+        } catch (e) {
+          console.warn("Error leyendo rol:", e);
+          userRole = 'tecnico';
+        }
+
+        document.getElementById('sec-login').classList.add('hidden');
+        document.getElementById('btn-logout').classList.remove('hidden');
+
+        if (userRole === 'gestor') {
+          document.getElementById('role-switcher').classList.remove('hidden');
+        } else {
+          document.getElementById('role-switcher').classList.add('hidden');
+        }
+
+        switchRoleView(userRole === 'gestor' ? 'gestor' : 'tecnico');
+        listenToFirestoreData();
+      } else {
+        currentUser = null;
+        document.getElementById('sec-login').classList.remove('hidden');
+        document.getElementById('sec-tecnico').classList.add('hidden');
+        document.getElementById('sec-gestor').classList.add('hidden');
+        document.getElementById('btn-logout').classList.add('hidden');
+        document.getElementById('user-display-email').innerText = "No autenticado";
+      }
+    });
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-password').value;
+      const errDiv = document.getElementById('login-error');
+      errDiv.classList.add('hidden');
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch (err) {
+        errDiv.innerText = "Error de autenticación: " + err.message;
+        errDiv.classList.remove('hidden');
+      }
+    });
+
+    window.handleLogout = () => signOut(auth);
+
+    function listenToFirestoreData() {
+      onSnapshot(collection(db, "work_orders"), (snapshot) => {
+        workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (userRole === 'tecnico' || document.getElementById('sec-tecnico').classList.contains('hidden') === false) {
+          renderOTSelect();
+        }
+        if (userRole === 'gestor') renderGestorReports();
+      });
+
+      onSnapshot(collection(db, "campaigns"), (snapshot) => {
+        campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const sel = document.getElementById('ot-camp-sel');
+        sel.innerHTML = campaigns.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+      });
+    }
+
+    window.switchRoleView = (role) => {
+      const btnTech = document.getElementById('btn-view-tech');
+      const btnGest = document.getElementById('btn-view-gest');
+
+      if (role === 'tecnico') {
+        document.getElementById('sec-tecnico').classList.remove('hidden');
+        document.getElementById('sec-gestor').classList.add('hidden');
+        btnTech.className = "px-3 py-1.5 rounded-md bg-emerald-600 text-white shadow";
+        btnGest.className = "px-3 py-1.5 rounded-md text-emerald-200 hover:text-white";
+        renderOTSelect();
+      } else {
+        document.getElementById('sec-gestor').classList.remove('hidden');
+        document.getElementById('sec-tecnico').classList.add('hidden');
+        btnGest.className = "px-3 py-1.5 rounded-md bg-emerald-600 text-white shadow";
+        btnTech.className = "px-3 py-1.5 rounded-md text-emerald-200 hover:text-white";
+        renderGestorReports();
+      }
+    };
+
+    function renderOTSelect() {
+      const select = document.getElementById('ot-select');
+      select.innerHTML = '<option value="">-- Selecciona una Orden de Trabajo --</option>';
+
+      const myOTs = workOrders.filter(ot => ot.tecnicoId === currentUser.email || userRole === 'gestor');
+
+      myOTs.forEach(ot => {
+        const opt = document.createElement('option');
+        opt.value = ot.id;
+        const isDone = ot.recintosRestantes === 0;
+        opt.innerText = `${isDone ? '✔ [FINALIZADA] ' : ''}${ot.nombre} - ${ot.provincia}`;
+        if (isDone) opt.className = 'ot-completed-option';
+        select.appendChild(opt);
+      });
+
+      const lastId = localStorage.getItem('ras_last_ot_' + currentUser.email);
+      if (lastId && myOTs.some(o => o.id === lastId)) {
+        select.value = lastId;
+        selectOT(lastId);
+      }
+    }
+
+    window.selectOT = (id) => {
+      if (!id) {
+        document.getElementById('ot-card').classList.add('hidden');
+        return;
+      }
+      localStorage.setItem('ras_last_ot_' + currentUser.email, id);
+      currentOT = workOrders.find(o => o.id === id);
+      if (!currentOT) return;
+
+      document.getElementById('ot-card').classList.remove('hidden');
+      document.getElementById('ot-card-title').innerText = currentOT.nombre;
+      document.getElementById('ot-card-subtitle').innerText = `Provincia: ${currentOT.provincia}`;
+
+      const visited = currentOT.recintosTotales - currentOT.recintosRestantes;
+      document.getElementById('ot-total-val').innerText = currentOT.recintosTotales;
+      document.getElementById('ot-visited-val').innerText = visited;
+      document.getElementById('ot-pending-val').innerText = currentOT.recintosRestantes;
+
+      const badge = document.getElementById('ot-card-badge');
+      if (currentOT.recintosRestantes === 0) {
+        badge.innerText = "Finalizada";
+        badge.className = "px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-emerald-100 text-emerald-800";
+      } else {
+        badge.innerText = "En Progreso";
+        badge.className = "px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-amber-100 text-amber-800";
+      }
+
+      const histDiv = document.getElementById('ot-history-container');
+      const hist = currentOT.historialDiario || [];
+      histDiv.innerHTML = hist.map(h => `
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+          <span class="font-bold text-slate-700">${h.fecha}</span> — Revisados: <strong class="text-emerald-700">${h.recintosHoy}</strong> (Restantes: ${h.recintosPendientes})
+        </div>
+      `).join('');
+    };
+
+    document.getElementById('form-daily').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentOT) return;
+
+      const pendingNew = parseInt(document.getElementById('reg-pending').value);
+      const visitedToday = currentOT.recintosRestantes - pendingNew;
+
+      const newHistory = currentOT.historialDiario || [];
+      newHistory.unshift({
+        fecha: document.getElementById('reg-date').value,
+        recintosPendientes: pendingNew,
+        recintosHoy: visitedToday > 0 ? visitedToday : 0
+      });
+
+      const otRef = doc(db, "work_orders", currentOT.id);
+      await updateDoc(otRef, {
+        recintosRestantes: pendingNew,
+        estado: pendingNew === 0 ? 'completada' : 'en_progreso',
+        historialDiario: newHistory
+      });
+
+      alert("Parte registrado en Firestore correctamente.");
+    });
+
+    document.getElementById('form-campaign').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const provBreakdown = {
+        Albacete: parseInt(document.getElementById('c-alb').value) || 0,
+        'Ciudad Real': parseInt(document.getElementById('c-cr').value) || 0,
+        Cuenca: parseInt(document.getElementById('c-cu').value) || 0,
+        Guadalajara: parseInt(document.getElementById('c-gu').value) || 0,
+        Toledo: parseInt(document.getElementById('c-to').value) || 0
+      };
+      const total = Object.values(provBreakdown).reduce((a, b) => a + b, 0);
+
+      await addDoc(collection(db, "campaigns"), {
+        nombre: document.getElementById('camp-name').value,
+        provBreakdown,
+        recintosTotales: total,
+        fechaInicio: new Date().toISOString()
+      });
+
+      alert("Campaña guardada en Firestore.");
+    });
+
+    document.getElementById('form-ot').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const totalRecs = parseInt(document.getElementById('ot-recintos').value);
+
+      await addDoc(collection(db, "work_orders"), {
+        nombre: document.getElementById('ot-code').value,
+        campaniaId: document.getElementById('ot-camp-sel').value,
+        provincia: document.getElementById('ot-prov-sel').value,
+        tecnicoId: document.getElementById('ot-tech-email').value,
+        recintosTotales: totalRecs,
+        recintosRestantes: totalRecs,
+        estado: 'en_progreso',
+        historialDiario: []
+      });
+
+      alert("OT creada en Firestore.");
+    });
+
+    function renderGestorReports() {
+      const provs = ['Albacete', 'Ciudad Real', 'Cuenca', 'Guadalajara', 'Toledo'];
+      let totCtrl = 0, totRev = 0, totPend = 0;
+
+      const tbody = document.getElementById('cst-table-body');
+      tbody.innerHTML = provs.map(p => {
+        const ots = workOrders.filter(o => o.provincia === p);
+        const ctrl = ots.reduce((a, b) => a + (b.recintosTotales || 0), 0);
+        const pend = ots.reduce((a, b) => a + (b.recintosRestantes || 0), 0);
+        const rev = ctrl - pend;
+        const pct = ctrl ? ((rev / ctrl) * 100).toFixed(1) : '0.0';
+
+        totCtrl += ctrl; totRev += rev; totPend += pend;
+
+        return `
+          <tr class="hover:bg-slate-50">
+            <td class="p-3 font-bold text-slate-800">${p}</td>
+            <td class="p-3 text-right font-medium">${ctrl}</td>
+            <td class="p-3 text-right font-bold text-emerald-700">${rev}</td>
+            <td class="p-3 text-right font-bold text-amber-700">${pend}</td>
+            <td class="p-3 text-right font-black text-slate-800">${pct}%</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('kpi-tot').innerText = totCtrl;
+      document.getElementById('kpi-rev').innerText = totRev;
+      document.getElementById('kpi-pen').innerText = totPend;
+      document.getElementById('kpi-pct').innerText = totCtrl ? `${((totRev / totCtrl) * 100).toFixed(1)}%` : '0%';
+    }
+
+    window.calcCampTotal = () => {
+      const sum = ['c-alb', 'c-cr', 'c-cu', 'c-gu', 'c-to'].reduce((a, id) => a + (parseInt(document.getElementById(id).value) || 0), 0);
+      document.getElementById('camp-total-sum').innerText = `${sum} Recintos`;
+    };
+
+    window.switchGestorSubTab = (tab) => {
+      document.getElementById('subtab-plan').classList.toggle('hidden', tab !== 'plan');
+      document.getElementById('subtab-rep').classList.toggle('hidden', tab !== 'rep');
+    };
+
+    window.filterOTOptions = () => {
+      const text = document.getElementById('ot-search-input').value.toLowerCase();
+      const select = document.getElementById('ot-select');
+      Array.from(select.options).forEach(opt => {
+        if (!opt.value) return;
+        opt.style.display = opt.innerText.toLowerCase().includes(text) ? '' : 'none';
+      });
+    };
+
+    window.toggleCodeModal = () => document.getElementById('modal-code').classList.toggle('hidden');
+    window.showPwaCode = (type) => {
+      document.getElementById('code-viewer').innerText = type === 'manifest' 
+        ? '{"short_name":"RAS","name":"RAS PWA","start_url":"./index.html","display":"standalone"}'
+        : 'self.addEventListener("fetch", (e) => e.respondWith(caches.match(e.request) || fetch(e.request)));';
+    };
+  </script>
+</body>
+</html>
