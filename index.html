@@ -30,7 +30,7 @@
             Control de Campo
             <span id="sync-indicator" class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" title="Sincronizado"></span>
           </h1>
-          <p id="user-display-email" class="text-xs text-emerald-200">No autenticado</p>
+          <p id="user-display-email" class="text-xs text-emerald-200">Cargando usuario...</p>
         </div>
       </div>
 
@@ -106,6 +106,7 @@
           <div>
             <h3 id="ot-card-title" class="font-bold text-xl text-slate-800">OT-000</h3>
             <p id="ot-card-subtitle" class="text-xs text-slate-500 font-medium">Provincia</p>
+            <p id="ot-card-tech" class="text-xs text-emerald-700 font-semibold mt-0.5">Técnico: -</p>
           </div>
           <span id="ot-card-badge" class="px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-amber-100 text-amber-800">En Progreso</span>
         </div>
@@ -146,23 +147,26 @@
         </form>
 
         <div class="pt-2">
-          <h4 class="font-bold text-xs text-slate-600 uppercase tracking-wider mb-2">Historial de Registros</h4>
-          <div id="ot-history-container" class="space-y-2 max-h-52 overflow-y-auto pr-1"></div>
+          <h4 class="font-bold text-xs text-slate-600 uppercase tracking-wider mb-2">Historial de Registros Diarios</h4>
+          <div id="ot-history-container" class="space-y-2 max-h-56 overflow-y-auto pr-1"></div>
         </div>
       </div>
     </section>
 
     <!-- VISTA: GESTOR -->
     <section id="sec-gestor" class="hidden space-y-6">
-      <!-- Navegación de Pestañas del Gestor (Reordenadas) -->
-      <div class="flex border-b border-slate-200 gap-2">
-        <button id="tab-btn-ots" onclick="switchGestorSubTab('ots')" class="px-5 py-2.5 font-bold text-sm border-b-2 border-emerald-600 text-emerald-800 flex items-center gap-2">
+      <!-- Navegación de Pestañas del Gestor -->
+      <div class="flex border-b border-slate-200 gap-2 overflow-x-auto">
+        <button id="tab-btn-ots" onclick="switchGestorSubTab('ots')" class="px-5 py-2.5 font-bold text-sm border-b-2 border-emerald-600 text-emerald-800 flex items-center gap-2 whitespace-nowrap">
           <i data-lucide="file-text" class="w-4 h-4"></i> Órdenes de Trabajo (OTs)
         </button>
-        <button id="tab-btn-plan" onclick="switchGestorSubTab('plan')" class="px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2">
+        <button id="tab-btn-plan" onclick="switchGestorSubTab('plan')" class="px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2 whitespace-nowrap">
           <i data-lucide="map-pin" class="w-4 h-4"></i> Planificaciones
         </button>
-        <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2">
+        <button id="tab-btn-users" onclick="switchGestorSubTab('users')" class="px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2 whitespace-nowrap">
+          <i data-lucide="users" class="w-4 h-4"></i> Usuarios y Alias
+        </button>
+        <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2 whitespace-nowrap">
           <i data-lucide="bar-chart-3" class="w-4 h-4"></i> Estadísticas e Informes
         </button>
       </div>
@@ -182,11 +186,11 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Campaña Asociada</label>
-                <select id="ot-camp-sel" required class="w-full p-2 border rounded-xl text-xs bg-slate-50"></select>
+                <select id="ot-camp-sel" required onchange="updateOTRecintosLimitHint()" class="w-full p-2 border rounded-xl text-xs bg-slate-50"></select>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Provincia</label>
-                <select id="ot-prov-sel" required class="w-full p-2 border rounded-xl text-xs bg-slate-50">
+                <select id="ot-prov-sel" required onchange="updateOTRecintosLimitHint()" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
                   <option value="Albacete">Albacete</option>
                   <option value="Ciudad Real">Ciudad Real</option>
                   <option value="Cuenca">Cuenca</option>
@@ -197,14 +201,21 @@
             </div>
             <div class="grid grid-cols-2 gap-3">
               <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">Técnico Asignado (Email)</label>
-                <input type="email" id="ot-tech-email" required placeholder="tecnico@geacam.com" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50">
+                <label class="block text-xs font-bold text-slate-600 mb-1">Técnico Asignado</label>
+                <select id="ot-tech-select" required class="w-full p-2 border rounded-xl text-xs bg-slate-50"></select>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Recintos Asignados</label>
                 <input type="number" id="ot-recintos" min="1" required placeholder="Ej: 200" class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50 font-bold">
               </div>
             </div>
+
+            <!-- Hint límite recintos -->
+            <div id="ot-recintos-hint" class="text-xs bg-blue-50 text-blue-800 p-2.5 rounded-xl border border-blue-200 font-semibold flex items-center gap-1.5">
+              <i data-lucide="info" class="w-4 h-4 text-blue-600"></i>
+              <span>Selecciona una campaña para verificar la disponibilidad de recintos.</span>
+            </div>
+
             <button type="submit" class="w-full py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
               <i data-lucide="check-circle" class="w-4 h-4"></i> Generar Orden de Trabajo
             </button>
@@ -216,7 +227,7 @@
           <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-4">
             <div>
               <h3 class="font-bold text-base text-slate-800">Gestión de Órdenes de Trabajo Existentes</h3>
-              <p class="text-xs text-slate-400">Listado, filtrado, edición y borrado de OTs registradas</p>
+              <p class="text-xs text-slate-400">Listado, filtrado, edición completa y borrado de OTs</p>
             </div>
             <div class="relative w-full md:w-72">
               <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-2.5"></i>
@@ -306,7 +317,35 @@
         </div>
       </div>
 
-      <!-- PESTAÑA 3: ESTADÍSTICAS E INFORMES -->
+      <!-- PESTAÑA 3: USUARIOS Y ALIAS -->
+      <div id="subtab-users" class="hidden space-y-6">
+        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-4">
+            <div>
+              <h3 class="font-bold text-base text-slate-800 flex items-center gap-2">
+                <i data-lucide="users" class="w-5 h-5 text-emerald-600"></i> Gestión de Usuarios, Alias y Roles
+              </h3>
+              <p class="text-xs text-slate-400">Asigna un nombre real/alias a cada correo para visualizarlo en las OTs y ajusta sus roles</p>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
+                  <th class="p-3">Correo Electrónico</th>
+                  <th class="p-3">Alias / Nombre Completo</th>
+                  <th class="p-3 text-center">Rol</th>
+                  <th class="p-3 text-center">Acción</th>
+                </tr>
+              </thead>
+              <tbody id="users-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA 4: ESTADÍSTICAS E INFORMES -->
       <div id="subtab-rep" class="hidden space-y-6">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
@@ -356,13 +395,49 @@
     </section>
   </main>
 
+  <!-- MODAL PARA EDICIÓN DE OT -->
+  <div id="modal-edit-ot" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-100">
+      <div class="flex justify-between items-center border-b pb-3">
+        <h3 class="font-bold text-base text-slate-800">Editar Orden de Trabajo</h3>
+        <button onclick="closeEditOTModal()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-5 h-5"></i></button>
+      </div>
+
+      <form id="form-edit-ot" class="space-y-3">
+        <input type="hidden" id="edit-ot-id">
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Nombre / Código OT</label>
+          <input type="text" id="edit-ot-code" required class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50 font-bold">
+        </div>
+        <div>
+          <label class="block text-xs font-bold text-slate-600 mb-1">Técnico Asignado</label>
+          <select id="edit-ot-tech" required class="w-full p-2 border rounded-xl text-xs bg-slate-50"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Recintos Totales</label>
+            <input type="number" id="edit-ot-total" min="1" required class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50 font-bold">
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-600 mb-1">Recintos Pendientes</label>
+            <input type="number" id="edit-ot-pending" min="0" required class="w-full px-3 py-2 border rounded-xl text-xs bg-slate-50 font-bold text-amber-700">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+          <button type="button" onclick="closeEditOTModal()" class="px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl">Cancelar</button>
+          <button type="submit" class="px-4 py-2 bg-emerald-700 text-white font-bold text-xs rounded-xl shadow">Guardar Cambios</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
   <!-- INTEGRACIÓN FIREBASE SDK V10 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-    // Configuración Firebase con ras-geacam
     const firebaseConfig = {
       apiKey: "AIzaSyDgq3wxMrFKQ-1SmSLUxbwyZU6ETAQjzys",
       authDomain: "ras-geacam.firebaseapp.com",
@@ -385,6 +460,7 @@
     let userRole = 'tecnico';
     let workOrders = [];
     let campaigns = [];
+    let usersList = [];
     let currentOT = null;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -402,7 +478,9 @@
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         currentUser = user;
-        document.getElementById('user-display-email').innerText = user.email;
+
+        // Registrar o asegurar perfil de usuario en base de datos
+        await ensureUserProfile(user);
 
         const emailLower = user.email.toLowerCase().trim();
         if (GESTOR_EMAILS.includes(emailLower)) {
@@ -442,6 +520,20 @@
       }
     });
 
+    async function ensureUserProfile(user) {
+      const uRef = doc(db, "users", user.uid);
+      const snap = await getDoc(uRef);
+      if (!snap.exists()) {
+        const defaultAlias = user.email.split('@')[0].replace('.', ' ');
+        const aliasFormatted = defaultAlias.charAt(0).toUpperCase() + defaultAlias.slice(1);
+        await setDoc(uRef, {
+          email: user.email,
+          alias: aliasFormatted,
+          role: GESTOR_EMAILS.includes(user.email.toLowerCase().trim()) ? 'gestor' : 'tecnico'
+        });
+      }
+    }
+
     document.getElementById('form-login').addEventListener('submit', async (e) => {
       e.preventDefault();
       const email = document.getElementById('login-email').value;
@@ -460,25 +552,59 @@
     window.handleLogout = () => signOut(auth);
 
     function listenToFirestoreData() {
+      // Escuchar Usuarios
+      onSnapshot(collection(db, "users"), (snapshot) => {
+        usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Actualizar el header con el alias del usuario actual
+        const curU = usersList.find(u => u.email === currentUser?.email);
+        const nameToShow = curU?.alias || currentUser?.email || 'Usuario';
+        document.getElementById('user-display-email').innerText = `${nameToShow} (${currentUser?.email})`;
+
+        populateTechSelects();
+        renderUsersTable();
+      });
+
+      // Escuchar OTs
       onSnapshot(collection(db, "work_orders"), (snapshot) => {
         workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (userRole === 'tecnico' || document.getElementById('sec-tecnico').classList.contains('hidden') === false) {
+        if (userRole === 'tecnico' || !document.getElementById('sec-tecnico').classList.contains('hidden')) {
           renderOTSelect();
         }
         if (userRole === 'gestor') {
           renderOTTable();
           renderGestorReports();
         }
+        if (currentOT) {
+          selectOT(currentOT.id);
+        }
       });
 
+      // Escuchar Campañas
       onSnapshot(collection(db, "campaigns"), (snapshot) => {
         campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const sel = document.getElementById('ot-camp-sel');
-        sel.innerHTML = campaigns.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+        sel.innerHTML = '<option value="">-- Selecciona Campaña --</option>' + campaigns.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
         if (userRole === 'gestor') {
           renderCampTable();
         }
       });
+    }
+
+    function getUserDisplayName(email) {
+      if (!email) return 'Sin Asignar';
+      const found = usersList.find(u => u.email.toLowerCase().trim() === email.toLowerCase().trim());
+      return found?.alias ? `${found.alias} (${email})` : email;
+    }
+
+    function populateTechSelects() {
+      const techSelect = document.getElementById('ot-tech-select');
+      const editTechSelect = document.getElementById('edit-ot-tech');
+
+      const options = usersList.map(u => `<option value="${u.email}">${u.alias ? u.alias + ' - ' + u.email : u.email}</option>`).join('');
+      
+      if (techSelect) techSelect.innerHTML = '<option value="">-- Seleccionar Técnico --</option>' + options;
+      if (editTechSelect) editTechSelect.innerHTML = options;
     }
 
     window.switchRoleView = (role) => {
@@ -526,6 +652,7 @@
     window.selectOT = (id) => {
       if (!id) {
         document.getElementById('ot-card').classList.add('hidden');
+        currentOT = null;
         return;
       }
       localStorage.setItem('ras_last_ot_' + currentUser.email, id);
@@ -535,6 +662,7 @@
       document.getElementById('ot-card').classList.remove('hidden');
       document.getElementById('ot-card-title').innerText = currentOT.nombre;
       document.getElementById('ot-card-subtitle').innerText = `Provincia: ${currentOT.provincia}`;
+      document.getElementById('ot-card-tech').innerText = `Técnico: ${getUserDisplayName(currentOT.tecnicoId)}`;
 
       const visited = currentOT.recintosTotales - currentOT.recintosRestantes;
       document.getElementById('ot-total-val').innerText = currentOT.recintosTotales;
@@ -550,23 +678,45 @@
         badge.className = "px-3 py-1 rounded-full text-xs font-extrabold uppercase bg-amber-100 text-amber-800";
       }
 
+      renderOTHistory();
+    };
+
+    function renderOTHistory() {
       const histDiv = document.getElementById('ot-history-container');
-      const hist = currentOT.historialDiario || [];
-      histDiv.innerHTML = hist.map(h => `
-        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-          <span class="font-bold text-slate-700">${h.fecha}</span> — Revisados: <strong class="text-emerald-700">${h.recintosHoy}</strong> (Restantes: ${h.recintosPendientes})
+      const hist = currentOT?.historialDiario || [];
+
+      if (!hist.length) {
+        histDiv.innerHTML = '<p class="text-xs text-slate-400 italic">No hay registros diarios grabados todavía.</p>';
+        return;
+      }
+
+      histDiv.innerHTML = hist.map((h, idx) => `
+        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs flex justify-between items-center">
+          <div>
+            <span class="font-bold text-slate-700">${h.fecha}</span> — Revisados: <strong class="text-emerald-700">${h.recintosHoy}</strong> (Pendientes tras visita: ${h.recintosPendientes})
+          </div>
+          <div class="flex gap-1">
+            <button onclick="editHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-emerald-700" title="Editar este parte"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="deleteHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-red-700" title="Eliminar este parte"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+          </div>
         </div>
       `).join('');
-    };
+      lucide.createIcons();
+    }
 
     document.getElementById('form-daily').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!currentOT) return;
 
       const pendingNew = parseInt(document.getElementById('reg-pending').value);
+      if (pendingNew > currentOT.recintosTotales) {
+        alert(`❌ Los recintos pendientes (${pendingNew}) no pueden ser mayores que los recintos totales asignados a la OT (${currentOT.recintosTotales}).`);
+        return;
+      }
+
       const visitedToday = currentOT.recintosRestantes - pendingNew;
 
-      const newHistory = currentOT.historialDiario || [];
+      const newHistory = [...(currentOT.historialDiario || [])];
       newHistory.unshift({
         fecha: document.getElementById('reg-date').value,
         recintosPendientes: pendingNew,
@@ -574,34 +724,147 @@
       });
 
       const otRef = doc(db, "work_orders", currentOT.id);
-      await updateDoc(otRef, {
-        recintosRestantes: pendingNew,
-        estado: pendingNew === 0 ? 'completada' : 'en_progreso',
-        historialDiario: newHistory
-      });
-
-      alert("Parte registrado en Firestore correctamente.");
+      
+      try {
+        await updateDoc(otRef, {
+          recintosRestantes: pendingNew,
+          estado: pendingNew === 0 ? 'completada' : 'en_progreso',
+          historialDiario: newHistory
+        });
+        alert("Parte de trabajo registrado correctamente.");
+      } catch (error) {
+        alert("❌ Error al guardar en Firebase: " + error.message);
+      }
     });
 
-    // --- GESTOR: CREAR Y GESTIONAR OTS ---
+    window.editHistoryItem = async (index) => {
+      if (!currentOT) return;
+      const hist = currentOT.historialDiario || [];
+      const item = hist[index];
+      if (!item) return;
+
+      const newPending = prompt(`Modificar recintos pendientes para el registro del ${item.fecha}:`, item.recintosPendientes);
+      if (newPending === null) return;
+
+      const valPending = parseInt(newPending);
+      if (isNaN(valPending) || valPending < 0) {
+        alert("Por favor introduce un número válido.");
+        return;
+      }
+
+      hist[index].recintosPendientes = valPending;
+      // Recalcular recintos restantes tomando el último registro registrado (índice 0)
+      const latestPending = hist[0].recintosPendientes;
+
+      try {
+        await updateDoc(doc(db, "work_orders", currentOT.id), {
+          recintosRestantes: latestPending,
+          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          historialDiario: hist
+        });
+        alert("Parte modificado.");
+      } catch (e) {
+        alert("Error al modificar: " + e.message);
+      }
+    };
+
+    window.deleteHistoryItem = async (index) => {
+      if (!currentOT) return;
+      if (!confirm("¿Deseas eliminar este registro de visita?")) return;
+
+      const hist = [...(currentOT.historialDiario || [])];
+      hist.splice(index, 1);
+
+      // Si no quedan historias, recintos restantes vuelve a ser igual a recintosTotales
+      const latestPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
+
+      try {
+        await updateDoc(doc(db, "work_orders", currentOT.id), {
+          recintosRestantes: latestPending,
+          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          historialDiario: hist
+        });
+        alert("Registro eliminado.");
+      } catch (e) {
+        alert("Error al eliminar: " + e.message);
+      }
+    };
+
+    // --- GESTOR: CREAR Y GESTIONAR OTS CON VALIDACIÓN ---
+    window.updateOTRecintosLimitHint = () => {
+      const campId = document.getElementById('ot-camp-sel').value;
+      const prov = document.getElementById('ot-prov-sel').value;
+      const hint = document.getElementById('ot-recintos-hint');
+
+      if (!campId || !prov) {
+        hint.innerHTML = `<i data-lucide="info" class="w-4 h-4 text-blue-600"></i> Selecciona una campaña y provincia.`;
+        lucide.createIcons();
+        return;
+      }
+
+      const camp = campaigns.find(c => c.id === campId);
+      const totalCampProv = camp?.provBreakdown?.[prov] || 0;
+
+      // Calcular recintos ya asignados a esta provincia en esta campaña
+      const assigned = workOrders
+        .filter(o => o.campaniaId === campId && o.provincia === prov)
+        .reduce((sum, o) => sum + (parseInt(o.recintosTotales) || 0), 0);
+
+      const available = totalCampProv - assigned;
+
+      if (available <= 0) {
+        hint.className = "text-xs bg-red-50 text-red-800 p-2.5 rounded-xl border border-red-200 font-semibold flex items-center gap-1.5";
+        hint.innerHTML = `<i data-lucide="alert-triangle" class="w-4 h-4 text-red-600"></i> Campaña completa en ${prov}. Planificados: ${totalCampProv}, Asignados en OTs: ${assigned}. Disponible: 0`;
+      } else {
+        hint.className = "text-xs bg-emerald-50 text-emerald-800 p-2.5 rounded-xl border border-emerald-200 font-semibold flex items-center gap-1.5";
+        hint.innerHTML = `<i data-lucide="check-circle" class="w-4 h-4 text-emerald-600"></i> Disponibles en ${prov}: <strong>${available}</strong> recintos (de ${totalCampProv} planificados).`;
+      }
+      lucide.createIcons();
+    };
+
     document.getElementById('form-ot').addEventListener('submit', async (e) => {
       e.preventDefault();
+      const campId = document.getElementById('ot-camp-sel').value;
+      const prov = document.getElementById('ot-prov-sel').value;
       const totalRecs = parseInt(document.getElementById('ot-recintos').value);
 
-      await addDoc(collection(db, "work_orders"), {
-        nombre: document.getElementById('ot-code').value,
-        campaniaId: document.getElementById('ot-camp-sel').value,
-        provincia: document.getElementById('ot-prov-sel').value,
-        tecnicoId: document.getElementById('ot-tech-email').value,
-        recintosTotales: totalRecs,
-        recintosRestantes: totalRecs,
-        estado: 'en_progreso',
-        historialDiario: []
-      });
+      if (!campId) {
+        alert("Por favor selecciona una Campaña para asociar la OT.");
+        return;
+      }
 
-      document.getElementById('ot-code').value = '';
-      document.getElementById('ot-recintos').value = '';
-      alert("Orden de Trabajo generada en Firestore.");
+      // Validar recintos de la planificación
+      const camp = campaigns.find(c => c.id === campId);
+      const totalCampProv = camp?.provBreakdown?.[prov] || 0;
+      const assigned = workOrders
+        .filter(o => o.campaniaId === campId && o.provincia === prov)
+        .reduce((sum, o) => sum + (parseInt(o.recintosTotales) || 0), 0);
+      const available = totalCampProv - assigned;
+
+      if (totalRecs > available) {
+        alert(`❌ ERROR: No se puede generar la OT.\n\nHas indicado ${totalRecs} recintos, pero solo quedan ${available} disponibles en ${prov} para la planificación "${camp.nombre}".`);
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "work_orders"), {
+          nombre: document.getElementById('ot-code').value,
+          campaniaId: campId,
+          provincia: prov,
+          tecnicoId: document.getElementById('ot-tech-select').value,
+          recintosTotales: totalRecs,
+          recintosRestantes: totalRecs,
+          estado: 'en_progreso',
+          historialDiario: []
+        });
+
+        document.getElementById('ot-code').value = '';
+        document.getElementById('ot-recintos').value = '';
+        updateOTRecintosLimitHint();
+        alert("Orden de Trabajo generada correctamente.");
+      } catch (error) {
+        alert("❌ Error al generar la OT: " + error.message);
+      }
     });
 
     window.renderOTTable = () => {
@@ -611,7 +874,8 @@
       const filtered = workOrders.filter(o => 
         (o.nombre || '').toLowerCase().includes(filter) ||
         (o.provincia || '').toLowerCase().includes(filter) ||
-        (o.tecnicoId || '').toLowerCase().includes(filter)
+        (o.tecnicoId || '').toLowerCase().includes(filter) ||
+        getUserDisplayName(o.tecnicoId).toLowerCase().includes(filter)
       );
 
       if (!filtered.length) {
@@ -625,7 +889,7 @@
           <tr class="hover:bg-slate-50">
             <td class="p-3 font-bold text-slate-800">${o.nombre}</td>
             <td class="p-3">${o.provincia}</td>
-            <td class="p-3 text-slate-600">${o.tecnicoId}</td>
+            <td class="p-3 text-slate-700 font-medium">${getUserDisplayName(o.tecnicoId)}</td>
             <td class="p-3 text-right font-semibold">${o.recintosTotales}</td>
             <td class="p-3 text-right font-bold ${isDone ? 'text-emerald-700' : 'text-amber-700'}">${o.recintosRestantes}</td>
             <td class="p-3 text-center">
@@ -634,7 +898,7 @@
               </span>
             </td>
             <td class="p-3 text-center space-x-1">
-              <button onclick="editOT('${o.id}')" class="p-1 text-slate-500 hover:text-emerald-700 rounded" title="Editar OT">
+              <button onclick="openEditOTModal('${o.id}')" class="p-1 text-slate-500 hover:text-emerald-700 rounded" title="Editar OT Completa">
                 <i data-lucide="edit-3" class="w-4 h-4"></i>
               </button>
               <button onclick="deleteOT('${o.id}')" class="p-1 text-slate-500 hover:text-red-700 rounded" title="Eliminar OT">
@@ -647,33 +911,58 @@
       lucide.createIcons();
     };
 
-    window.editOT = async (otId) => {
+    // Modal para Edición completa de OT
+    window.openEditOTModal = (otId) => {
       const ot = workOrders.find(o => o.id === otId);
       if (!ot) return;
 
-      const newTech = prompt("Modificar Email del Técnico Asignado:", ot.tecnicoId);
-      if (newTech === null) return;
+      document.getElementById('edit-ot-id').value = ot.id;
+      document.getElementById('edit-ot-code').value = ot.nombre || '';
+      document.getElementById('edit-ot-tech').value = ot.tecnicoId || '';
+      document.getElementById('edit-ot-total').value = ot.recintosTotales || 0;
+      document.getElementById('edit-ot-pending').value = ot.recintosRestantes || 0;
 
-      const newTotal = prompt("Modificar Total de Recintos Asignados:", ot.recintosTotales);
-      if (newTotal === null) return;
-
-      const newPending = prompt("Modificar Recintos Pendientes Restantes:", ot.recintosRestantes);
-      if (newPending === null) return;
-
-      const pendingVal = parseInt(newPending) || 0;
-      await updateDoc(doc(db, "work_orders", otId), {
-        tecnicoId: newTech,
-        recintosTotales: parseInt(newTotal) || ot.recintosTotales,
-        recintosRestantes: pendingVal,
-        estado: pendingVal === 0 ? 'completada' : 'en_progreso'
-      });
-      alert("OT actualizada correctamente.");
+      document.getElementById('modal-edit-ot').classList.remove('hidden');
     };
+
+    window.closeEditOTModal = () => {
+      document.getElementById('modal-edit-ot').classList.add('hidden');
+    };
+
+    document.getElementById('form-edit-ot').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otId = document.getElementById('edit-ot-id').value;
+      const ot = workOrders.find(o => o.id === otId);
+      if (!ot) return;
+
+      const newCode = document.getElementById('edit-ot-code').value;
+      const newTech = document.getElementById('edit-ot-tech').value;
+      const newTotal = parseInt(document.getElementById('edit-ot-total').value);
+      const newPending = parseInt(document.getElementById('edit-ot-pending').value);
+
+      try {
+        await updateDoc(doc(db, "work_orders", otId), {
+          nombre: newCode,
+          tecnicoId: newTech,
+          recintosTotales: newTotal,
+          recintosRestantes: newPending,
+          estado: newPending === 0 ? 'completada' : 'en_progreso'
+        });
+        closeEditOTModal();
+        alert("Orden de Trabajo modificada correctamente.");
+      } catch (error) {
+        alert("Error al guardar cambios: " + error.message);
+      }
+    });
 
     window.deleteOT = async (otId) => {
       if (confirm("¿Estás seguro de que deseas eliminar esta Orden de Trabajo?")) {
-        await deleteDoc(doc(db, "work_orders", otId));
-        alert("Orden de Trabajo eliminada.");
+        try {
+          await deleteDoc(doc(db, "work_orders", otId));
+          alert("Orden de Trabajo eliminada.");
+        } catch(error) {
+          alert("❌ Error al eliminar la OT: " + error.message);
+        }
       }
     };
 
@@ -689,15 +978,19 @@
       };
       const total = Object.values(provBreakdown).reduce((a, b) => a + b, 0);
 
-      await addDoc(collection(db, "campaigns"), {
-        nombre: document.getElementById('camp-name').value,
-        provBreakdown,
-        recintosTotales: total,
-        fechaInicio: new Date().toISOString()
-      });
+      try {
+        await addDoc(collection(db, "campaigns"), {
+          nombre: document.getElementById('camp-name').value,
+          provBreakdown,
+          recintosTotales: total,
+          fechaInicio: new Date().toISOString()
+        });
 
-      document.getElementById('camp-name').value = '';
-      alert("Planificación guardada en Firestore.");
+        document.getElementById('camp-name').value = '';
+        alert("Planificación guardada en Firebase.");
+      } catch (error) {
+        alert("❌ Error al crear la Planificación: " + error.message);
+      }
     });
 
     window.renderCampTable = () => {
@@ -756,18 +1049,71 @@
       const newBreakdown = { Albacete: alb, 'Ciudad Real': cr, Cuenca: cu, Guadalajara: gu, Toledo: to };
       const newTotal = Object.values(newBreakdown).reduce((a, b) => a + b, 0);
 
-      await updateDoc(doc(db, "campaigns", campId), {
-        nombre: newName,
-        provBreakdown: newBreakdown,
-        recintosTotales: newTotal
-      });
-      alert("Planificación actualizada.");
+      try {
+        await updateDoc(doc(db, "campaigns", campId), {
+          nombre: newName,
+          provBreakdown: newBreakdown,
+          recintosTotales: newTotal
+        });
+        alert("Planificación actualizada.");
+      } catch(error) {
+        alert("❌ Error al actualizar Planificación: " + error.message);
+      }
     };
 
     window.deleteCampaign = async (campId) => {
       if (confirm("¿Estás seguro de que deseas eliminar esta planificación?")) {
-        await deleteDoc(doc(db, "campaigns", campId));
-        alert("Planificación eliminada.");
+        try {
+          await deleteDoc(doc(db, "campaigns", campId));
+          alert("Planificación eliminada.");
+        } catch(error) {
+          alert("❌ Error al eliminar Planificación: " + error.message);
+        }
+      }
+    };
+
+    // --- GESTOR: GESTIÓN DE USUARIOS Y ALIAS ---
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      if (!tbody) return;
+
+      if (!usersList.length) {
+        tbody.innerHTML = '<tr><td colspan="4" class="p-4 text-center text-slate-400 italic">Cargando lista de usuarios...</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = usersList.map(u => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-3 font-medium text-slate-700">${u.email}</td>
+          <td class="p-3 font-bold text-slate-800">${u.alias || '<em>Sin alias</em>'}</td>
+          <td class="p-3 text-center">
+            <span class="px-2 py-1 rounded-full text-[10px] font-bold ${u.role === 'gestor' ? 'bg-purple-100 text-purple-800' : 'bg-slate-100 text-slate-700'}">
+              ${(u.role || 'tecnico').toUpperCase()}
+            </span>
+          </td>
+          <td class="p-3 text-center">
+            <button onclick="editUserAlias('${u.id}', '${u.alias || ''}', '${u.role || 'tecnico'}')" class="px-2 py-1 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 font-bold rounded-lg border border-emerald-200">
+              Editar Alias / Rol
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    window.editUserAlias = async (userId, currentAlias, currentRole) => {
+      const newAlias = prompt("Introduce el Nombre Real / Alias para este usuario:", currentAlias);
+      if (newAlias === null) return;
+
+      const newRole = confirm("¿Quieres asignar rol de GESTOR a este usuario?\n\nAceptar = Gestor\nCancelar = Técnico") ? 'gestor' : 'tecnico';
+
+      try {
+        await updateDoc(doc(db, "users", userId), {
+          alias: newAlias.trim(),
+          role: newRole
+        });
+        alert("Usuario actualizado.");
+      } catch (e) {
+        alert("Error al actualizar usuario: " + e.message);
       }
     };
 
@@ -812,21 +1158,25 @@
     window.switchGestorSubTab = (tab) => {
       document.getElementById('subtab-ots').classList.toggle('hidden', tab !== 'ots');
       document.getElementById('subtab-plan').classList.toggle('hidden', tab !== 'plan');
+      document.getElementById('subtab-users').classList.toggle('hidden', tab !== 'users');
       document.getElementById('subtab-rep').classList.toggle('hidden', tab !== 'rep');
 
       const btnOTs = document.getElementById('tab-btn-ots');
       const btnPlan = document.getElementById('tab-btn-plan');
+      const btnUsers = document.getElementById('tab-btn-users');
       const btnRep = document.getElementById('tab-btn-rep');
 
-      const activeClass = "px-5 py-2.5 font-bold text-sm border-b-2 border-emerald-600 text-emerald-800 flex items-center gap-2";
-      const inactiveClass = "px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2";
+      const activeClass = "px-5 py-2.5 font-bold text-sm border-b-2 border-emerald-600 text-emerald-800 flex items-center gap-2 whitespace-nowrap";
+      const inactiveClass = "px-5 py-2.5 font-medium text-sm text-slate-500 flex items-center gap-2 whitespace-nowrap";
 
       btnOTs.className = tab === 'ots' ? activeClass : inactiveClass;
       btnPlan.className = tab === 'plan' ? activeClass : inactiveClass;
+      btnUsers.className = tab === 'users' ? activeClass : inactiveClass;
       btnRep.className = tab === 'rep' ? activeClass : inactiveClass;
 
       if (tab === 'ots') renderOTTable();
       if (tab === 'plan') renderCampTable();
+      if (tab === 'users') renderUsersTable();
       if (tab === 'rep') renderGestorReports();
     };
 
