@@ -1,0 +1,1788 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>RAS - Control de Campo y Ordenes de Trabajo</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#89986D">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- ExcelJS y FileSaver para rellenar la plantilla XLSX -->
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  <style>
+    :root {
+      --color-primary: #89986D;
+      --color-card: #AEB784;
+    }
+    .bg-main-primary { background-color: #89986D; }
+    .bg-main-primary-dark { background-color: #728157; }
+    .bg-card-filled { background-color: #AEB784; }
+    .text-primary-dark { color: #364024; }
+    .ot-completed-option {
+      background-color: #e5ecd6 !important;
+      color: #364024 !important;
+      font-weight: 700 !important;
+    }
+    input, select, textarea {
+      font-size: 14px !important;
+    }
+  </style>
+</head>
+<body class="bg-[#F4F6F0] text-slate-800 font-sans min-h-screen flex flex-col pb-8">
+
+  <!-- Header Principal -->
+  <header class="bg-main-primary text-white shadow-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-3 py-2.5 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="bg-main-primary-dark px-2.5 py-1 rounded-lg font-black text-base tracking-wider shadow text-white">RAS</div>
+        <div class="leading-none">
+          <h1 class="font-bold text-sm flex items-center gap-1.5 text-white">
+            Control de Campo
+            <span id="sync-indicator" class="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+          </h1>
+          <p id="user-display-email" class="text-[11px] text-white/80 truncate max-w-[170px] sm:max-w-xs mt-0.5">Cargando...</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <!-- Switcher Técnico / Gestor -->
+        <div id="role-switcher" class="hidden bg-main-primary-dark/80 p-0.5 rounded-lg flex text-[11px] font-semibold shadow-inner">
+          <button id="btn-view-tech" onclick="switchRoleView('tecnico')" class="px-2.5 py-1 rounded-md bg-white text-[#364024] font-bold shadow">Téc</button>
+          <button id="btn-view-gest" onclick="switchRoleView('gestor')" class="px-2.5 py-1 rounded-md text-white/90">Gest</button>
+        </div>
+
+        <!-- Cerrar Sesión -->
+        <button id="btn-logout" onclick="handleLogout()" class="hidden p-1.5 bg-rose-700 hover:bg-rose-800 rounded-lg text-white shadow transition" title="Cerrar sesión">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenedor Principal -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-2 sm:p-4 md:p-6">
+
+    <!-- VISTA: LOGIN -->
+    <section id="sec-login" class="max-w-sm mx-auto my-8 bg-card-filled p-6 rounded-2xl shadow-lg text-[#252c17]">
+      <div class="text-center mb-6">
+        <div class="w-16 h-16 bg-white text-[#525f3c] rounded-2xl flex items-center justify-center mx-auto mb-3 font-black text-2xl shadow-md">RAS</div>
+        <h2 class="text-xl font-bold text-[#1f2514]">Acceso Técnico</h2>
+        <p class="text-xs text-[#364024] font-semibold mt-0.5">Introduce tus credenciales</p>
+      </div>
+
+      <form id="form-login" class="space-y-3">
+        <div>
+          <label class="block text-[11px] font-black text-[#252c17] uppercase mb-1">Correo Electrónico</label>
+          <div class="relative">
+            <i data-lucide="mail" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="email" id="login-email" required class="w-full pl-9 pr-3 py-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]" placeholder="usuario@geacam.com">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[11px] font-black text-[#252c17] uppercase mb-1">Contraseña</label>
+          <div class="relative">
+            <i data-lucide="lock" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="password" id="login-password" required class="w-full pl-9 pr-3 py-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]" placeholder="••••••••">
+          </div>
+        </div>
+        <div id="login-error" class="hidden text-xs text-red-700 font-semibold bg-white p-2.5 rounded-lg shadow"></div>
+        <button type="submit" class="w-full py-2.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold rounded-xl shadow-md text-xs flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="log-in" class="w-4 h-4"></i> Entrar
+        </button>
+      </form>
+    </section>
+
+    <!-- VISTA: TÉCNICO -->
+    <section id="sec-tecnico" class="hidden space-y-4">
+      <!-- Navegación de Pestañas del Técnico -->
+      <div class="bg-card-filled p-1 rounded-2xl flex gap-1 max-w-xl mx-auto shadow-md">
+        <button id="tech-tab-btn-ots" onclick="switchTechSubTab('ots')" class="flex-1 py-2 text-xs font-black rounded-xl bg-white text-[#2a331c] shadow-sm flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="clipboard-check" class="w-4 h-4 text-[#728157]"></i> Control OTs
+        </button>
+        <button id="tech-tab-btn-km" onclick="switchTechSubTab('km')" class="flex-1 py-2 text-xs font-black rounded-xl text-[#2a331c] hover:bg-white/40 flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="car" class="w-4 h-4"></i> Rutas y Km
+        </button>
+        <button id="tech-tab-btn-down" onclick="switchTechSubTab('down')" class="flex-1 py-2 text-xs font-black rounded-xl text-[#2a331c] hover:bg-white/40 flex items-center justify-center gap-1.5 transition">
+          <i data-lucide="download" class="w-4 h-4"></i> Descargas
+        </button>
+      </div>
+
+      <!-- SUB-PESTAÑA 1: CONTROL DE OTS -->
+      <div id="tech-subtab-ots" class="max-w-xl mx-auto space-y-4">
+        <!-- Tarjeta Selector OT -->
+        <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-2.5">
+          <label class="block text-[11px] font-black text-[#222a16] uppercase">Orden de Trabajo (OT)</label>
+          <div class="relative">
+            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+            <input type="text" id="ot-search-input" oninput="filterOTOptions()" placeholder="Filtrar por texto..." class="w-full pl-8 pr-3 py-1.5 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          </div>
+          <select id="ot-select" onchange="selectOT(this.value)" class="w-full p-2.5 border-0 rounded-xl font-bold text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+            <option value="">-- Carga de OTs en curso... --</option>
+          </select>
+        </div>
+
+        <!-- Ficha OT -->
+        <div id="ot-card" class="hidden bg-card-filled rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
+          <div class="flex justify-between items-start border-b border-black/10 pb-3">
+            <div>
+              <h3 id="ot-card-title" class="font-extrabold text-base text-[#1b2210]">OT-000</h3>
+              <p id="ot-card-subtitle" class="text-[11px] text-[#2c371b] font-bold">Provincia</p>
+              <p id="ot-card-tech" class="text-[11px] text-[#212a14] font-black">Técnico: -</p>
+            </div>
+            <span id="ot-card-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#3c4728] shadow">En Progreso</span>
+          </div>
+
+          <!-- Métricas OT -->
+          <div class="grid grid-cols-3 gap-2.5 text-center">
+            <div class="bg-white p-2.5 rounded-xl shadow">
+              <span class="block text-[9px] font-black text-slate-500 uppercase">Totales</span>
+              <span id="ot-total-val" class="text-base font-black text-slate-800">0</span>
+            </div>
+            <div class="bg-white p-2.5 rounded-xl shadow">
+              <span class="block text-[9px] font-black text-[#56653e] uppercase">Revisados</span>
+              <span id="ot-visited-val" class="text-base font-black text-[#2e371f]">0</span>
+            </div>
+            <div class="bg-white p-2.5 rounded-xl shadow">
+              <span class="block text-[9px] font-black text-amber-700 uppercase">Pendientes</span>
+              <span id="ot-pending-val" class="text-base font-black text-amber-800">0</span>
+            </div>
+          </div>
+
+          <!-- Formulario Registro OT -->
+          <form id="form-daily" class="bg-white/90 p-3.5 rounded-xl shadow space-y-3">
+            <h4 class="font-black text-[10px] text-[#283219] uppercase tracking-wider flex items-center gap-1.5">
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#728157]"></i> Registro de Visita OT
+            </h4>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Fecha</label>
+                <input type="date" id="reg-date" required class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
+              </div>
+              <div>
+                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Pendientes Restantes</label>
+                <input type="number" id="reg-pending" min="0" required placeholder="0 si finaliza" class="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white text-right shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
+              </div>
+            </div>
+            <button type="submit" class="w-full py-2 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">
+              Guardar Visita OT
+            </button>
+          </form>
+
+          <div class="pt-1">
+            <h4 class="font-black text-[10px] text-[#222a15] uppercase tracking-wider mb-2">Historial OT</h4>
+            <div id="ot-history-container" class="space-y-1.5 max-h-48 overflow-y-auto pr-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SUB-PESTAÑA 2: RUTAS Y KILOMETRAJE -->
+      <div id="tech-subtab-km" class="hidden max-w-xl mx-auto space-y-4">
+
+        <!-- Formulario Diario (Tarjeta Contenedora) -->
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div class="flex items-center justify-between border-b border-black/10 pb-2.5">
+            <h3 id="km-form-title" class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-white"></span> Registro Diario de Jornada
+            </h3>
+            <button id="btn-cancel-km-edit" onclick="cancelKmEdit()" class="hidden text-xs text-rose-800 font-black flex items-center gap-1">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i> Cancelar edición
+            </button>
+          </div>
+
+          <form id="form-mileage" class="space-y-3.5">
+            <input type="hidden" id="km-edit-id" value="">
+
+            <!-- BLOQUE: JORNADA Y ACTIVIDAD -->
+            <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2.5">
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-0.5">Fecha</label>
+                  <input type="date" id="km-date" required onchange="handleKmDateChange()" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-0.5">Modalidad</label>
+                  <select id="km-gab-campo" required class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                    <option value="Campo">Campo</option>
+                    <option value="Gabinete">Gabinete</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-0.5">Actividad</label>
+                  <select id="km-actividad" required class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                    <option value="CST-AY">CST-AY</option>
+                    <option value="CST-CNR">CST-CNR</option>
+                    <option value="CST-VEA">CST-VEA</option>
+                    <option value="CST-VEG">CST-VEG</option>
+                    <option value="CST RE/TR">CST RE/TR</option>
+                    <option value="Otros">Otros</option>
+                  </select>
+                </div>
+                <div>
+                  <div class="flex justify-between items-center mb-0.5">
+                    <label class="block text-[10px] font-black text-[#2e391f] uppercase">Recintos OT</label>
+                    <span class="text-[9px] bg-main-primary text-white font-black px-1.5 py-0.2 rounded shadow-xs">Auto</span>
+                  </div>
+                  <input type="number" id="km-rendimiento" min="0" value="0" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black text-slate-800 text-right outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+              </div>
+            </div>
+
+            <!-- BLOQUE: HORARIOS -->
+            <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-[10px] font-black text-[#2e391f] uppercase flex items-center gap-1">
+                  <i data-lucide="clock" class="w-3.5 h-3.5 text-[#728157]"></i> Horario
+                </span>
+                <label class="flex items-center gap-1 text-[11px] font-black text-[#242c19] cursor-pointer bg-white px-2 py-0.5 rounded shadow-sm">
+                  <input type="checkbox" id="km-toggle-split" onchange="toggleSplitSchedule(this.checked)" class="rounded text-[#89986D] focus:ring-[#89986D]">
+                  <span>+ Pausa / Tarde</span>
+                </label>
+              </div>
+
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[9px] font-bold text-[#3d492c] uppercase">Entrada</span>
+                  <input type="time" id="km-hora-in-1" required class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <span class="text-[9px] font-bold text-[#3d492c] uppercase">Salida</span>
+                  <input type="time" id="km-hora-out-1" required class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+              </div>
+
+              <div id="km-split-fields" class="hidden pt-2 border-t border-slate-200 grid grid-cols-2 gap-2">
+                <div>
+                  <span class="text-[9px] font-bold text-[#3d492c] uppercase">Entrada 2</span>
+                  <input type="time" id="km-hora-in-2" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <span class="text-[9px] font-bold text-[#3d492c] uppercase">Salida 2</span>
+                  <input type="time" id="km-hora-out-2" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+              </div>
+            </div>
+
+            <!-- BLOQUE: RUTA -->
+            <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-1.5">
+              <div class="flex justify-between items-center">
+                <label class="text-[10px] font-black text-[#2e391f] uppercase flex items-center gap-1">
+                  <i data-lucide="map-pin" class="w-3.5 h-3.5 text-[#728157]"></i> Ruta del Vehículo
+                </label>
+                <button type="button" onclick="openRouteModal()" class="text-[11px] bg-main-primary text-white font-bold px-2 py-0.5 rounded shadow hover:bg-main-primary-dark flex items-center gap-1 transition">
+                  <i data-lucide="edit-3" class="w-3 h-3"></i> Redactar
+                </button>
+              </div>
+              <div onclick="openRouteModal()" class="cursor-pointer bg-white rounded-lg p-2 min-h-[38px] flex items-center justify-between text-xs shadow-sm">
+                <span id="km-ruta-display-text" class="text-slate-400 italic truncate">Toca para escribir municipios o puntos de ruta...</span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-[#89986D] shrink-0 ml-1"></i>
+              </div>
+              <input type="hidden" id="km-ruta-full" value="">
+            </div>
+
+            <!-- BLOQUE: VEHÍCULO Y KM (No obligatorios) -->
+            <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
+              <div class="grid grid-cols-3 gap-2 items-end">
+                <div>
+                  <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Matrícula</label>
+                  <input type="text" id="km-matricula" placeholder="0000-XXX" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Km Inicio</label>
+                  <input type="number" id="km-inicio" min="0" oninput="calcDailyKm()" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Km Fin</label>
+                  <input type="number" id="km-fin" min="0" oninput="calcDailyKm()" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+              </div>
+
+              <div class="bg-white px-3 py-2 rounded-lg flex justify-between items-center text-xs shadow-sm">
+                <span class="font-black text-[#27301b] uppercase text-[10px] tracking-wide">Recorrido del Día:</span>
+                <span id="km-total-day" class="font-black text-[#3f4a2d] text-sm">0 Km</span>
+              </div>
+            </div>
+
+            <!-- BLOQUE: GASTOS Y DIETAS -->
+            <div class="bg-white/80 rounded-xl overflow-hidden shadow-sm">
+              <button type="button" onclick="toggleSecondaryExpenses()" class="w-full p-2.5 text-left text-xs font-black text-[#2b351d] flex justify-between items-center transition hover:bg-white/90">
+                <span class="flex items-center gap-1.5 text-[11px]">
+                  <i data-lucide="coins" class="w-3.5 h-3.5 text-[#728157]"></i>
+                  Gastos: Repostaje, Dieta (€) y Otros (Opcional)
+                </span>
+                <i id="icon-toggle-expenses" data-lucide="chevron-down" class="w-4 h-4 text-[#89986D] transition-transform"></i>
+              </button>
+
+              <div id="section-expenses" class="hidden p-3 bg-white/60 border-t border-slate-200 grid grid-cols-2 gap-2">
+                <div>
+                  <label class="block text-[9px] font-black text-slate-700 uppercase mb-0.5">Litros Combustible</label>
+                  <input type="number" step="0.01" id="km-litros" min="0" placeholder="0" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-700 uppercase mb-0.5">Importe Repostaje (€)</label>
+                  <input type="number" step="0.01" id="km-importe-gas" min="0" placeholder="0.00" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-700 uppercase mb-0.5">Dieta (€)</label>
+                  <input type="number" step="0.01" id="km-dieta-valor" min="0" placeholder="0.00" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+                <div>
+                  <label class="block text-[9px] font-black text-slate-700 uppercase mb-0.5">Otros Gastos (€)</label>
+                  <input type="number" step="0.01" id="km-otros-gastos" min="0" placeholder="0.00" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                </div>
+              </div>
+            </div>
+
+            <!-- Botón Guardar -->
+            <button type="submit" id="btn-submit-km" class="w-full py-3 bg-main-primary hover:bg-main-primary-dark active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar Jornada
+            </button>
+          </form>
+        </div>
+
+        <!-- Historial Mensual -->
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3">
+          <div class="flex justify-between items-center border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Jornadas Registradas</h3>
+              <p class="text-[10px] text-[#2c371b] font-bold">Total acumulado en el mes</p>
+            </div>
+            <div class="flex items-center gap-2">
+              <input type="month" id="km-filter-month" onchange="renderMileageLogs()" class="p-1 border-0 rounded-lg text-xs font-bold bg-white text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+              <span class="text-xs font-black text-[#242c17] bg-white px-2.5 py-1 rounded-lg shadow-sm" id="km-month-total">0 Km</span>
+            </div>
+          </div>
+
+          <!-- Cards para móvil -->
+          <div id="km-cards-container" class="space-y-2 block sm:hidden"></div>
+
+          <!-- Tabla para escritorio -->
+          <div class="hidden sm:block overflow-x-auto bg-white/90 rounded-xl shadow p-2">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
+                  <th class="p-2.5">Fecha</th>
+                  <th class="p-2.5">Tipo / Act.</th>
+                  <th class="p-2.5">Ruta</th>
+                  <th class="p-2.5 text-right">Recintos</th>
+                  <th class="p-2.5 text-right">Km</th>
+                  <th class="p-2.5 text-right">Gastos</th>
+                  <th class="p-2.5 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="km-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- SUB-PESTAÑA 3: DESCARGAS DE DOCUMENTACIÓN / PARTES -->
+      <div id="tech-subtab-down" class="hidden max-w-xl mx-auto space-y-4">
+        
+        <!-- Tarjeta: Seguimiento Mensual de Actividades (Geacam) -->
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="file-spreadsheet" class="w-5 h-5 text-[#2e371f]"></i> Seguimiento Mensual de Actividades
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Control de vehículos, actividades y control de costes (GEACAM)</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Excel Oficial</span>
+          </div>
+
+          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
+            Genera y descarga la plantilla cumplimentada automáticamente con todas las jornadas, rutas, recintos y gastos registrados en el mes seleccionado.
+          </p>
+
+          <!-- Bloque de Selección de Mes y Botón de Descarga -->
+          <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Seleccionar Mes y Año:</label>
+              <input type="month" id="excel-export-month" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+            </div>
+
+            <button type="button" onclick="exportMonthlyReportExcel()" class="w-full py-3 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+              <i data-lucide="download" class="w-4 h-4"></i> Descargar Parte Cumplimentado (.xlsx)
+            </button>
+          </div>
+        </div>
+
+        <!-- Espacio preparado para futuros informes (se pueden añadir más tarjetas aquí) -->
+      </div>
+    </section>
+
+    <!-- VISTA: GESTOR -->
+    <section id="sec-gestor" class="hidden space-y-4">
+      <div class="flex border-b border-slate-300 gap-1 overflow-x-auto text-xs pb-1">
+        <button id="tab-btn-ots" onclick="switchGestorSubTab('ots')" class="px-3 py-2 font-bold border-b-2 border-main-primary text-[#242c17] whitespace-nowrap">OTs</button>
+        <button id="tab-btn-plan" onclick="switchGestorSubTab('plan')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Planificaciones</button>
+        <button id="tab-btn-users" onclick="switchGestorSubTab('users')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Usuarios</button>
+        <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Estadísticas</button>
+      </div>
+
+      <!-- OTs Gestor -->
+      <div id="subtab-ots" class="space-y-4">
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3 max-w-xl mx-auto">
+          <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+            <i data-lucide="file-plus" class="w-4 h-4 text-[#728157]"></i> Generar Nueva OT
+          </h3>
+          <form id="form-ot" class="space-y-2.5">
+            <div>
+              <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Código OT</label>
+              <input type="text" id="ot-code" required placeholder="Ej: OT-ALB-2026-01" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Campaña</label>
+                <select id="ot-camp-sel" required onchange="updateOTRecintosLimitHint()" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]"></select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Provincia</label>
+                <select id="ot-prov-sel" required onchange="updateOTRecintosLimitHint()" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+                  <option value="Albacete">Albacete</option>
+                  <option value="Ciudad Real">Ciudad Real</option>
+                  <option value="Cuenca">Cuenca</option>
+                  <option value="Guadalajara">Guadalajara</option>
+                  <option value="Toledo">Toledo</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Técnico</label>
+                <select id="ot-tech-select" required class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]"></select>
+              </div>
+              <div>
+                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Recintos</label>
+                <input type="number" id="ot-recintos" min="1" required placeholder="Ej: 200" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+              </div>
+            </div>
+            <div id="ot-recintos-hint" class="text-[11px] bg-white text-[#2a351b] p-2.5 rounded-xl font-bold shadow">
+              Selecciona una campaña para ver disponibilidad.
+            </div>
+            <button type="submit" class="w-full py-2.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition">Generar OT</button>
+          </form>
+        </div>
+
+        <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
+          <div class="flex justify-between items-center gap-2 border-b border-black/10 pb-2">
+            <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Listado OTs</h3>
+            <input type="text" id="filter-ot-table" oninput="renderOTTable()" placeholder="Buscar OT..." class="p-1.5 border-0 rounded-lg text-xs bg-white text-slate-800 w-44 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          </div>
+          <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
+                  <th class="p-2.5">Código</th>
+                  <th class="p-2.5">Prov.</th>
+                  <th class="p-2.5">Técnico</th>
+                  <th class="p-2.5 text-right">Totales</th>
+                  <th class="p-2.5 text-right">Pend.</th>
+                  <th class="p-2.5 text-center">Estado</th>
+                  <th class="p-2.5 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="ot-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Planificaciones Gestor -->
+      <div id="subtab-plan" class="hidden space-y-4">
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3 max-w-xl mx-auto">
+          <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Nueva Planificación Regional</h3>
+          <form id="form-campaign" class="space-y-2.5">
+            <div>
+              <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Nombre Campaña</label>
+              <input type="text" id="camp-name" required placeholder="Ej: PAC 2026" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
+              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Albacete</span><input type="number" min="0" id="c-alb" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
+              <div><span class="text-[10px] text-[#29321b] uppercase font-black">C. Real</span><input type="number" min="0" id="c-cr" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
+              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Cuenca</span><input type="number" min="0" id="c-cu" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
+              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Guadalajara</span><input type="number" min="0" id="c-gu" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
+              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Toledo</span><input type="number" min="0" id="c-to" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
+            </div>
+            <div class="bg-white p-2.5 rounded-xl text-xs font-black text-[#2e371f] flex justify-between shadow">
+              <span>Total Regional:</span>
+              <span id="camp-total-sum">0 Recintos</span>
+            </div>
+            <button type="submit" class="w-full py-2 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition">Guardar Planificación</button>
+          </form>
+        </div>
+
+        <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
+          <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
+                  <th class="p-2.5">Campaña</th>
+                  <th class="p-2.5 text-right">Alb</th>
+                  <th class="p-2.5 text-right">CR</th>
+                  <th class="p-2.5 text-right">Cu</th>
+                  <th class="p-2.5 text-right">Gu</th>
+                  <th class="p-2.5 text-right">To</th>
+                  <th class="p-2.5 text-right font-black text-[#202715]">Total</th>
+                  <th class="p-2.5 text-center">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="camp-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Usuarios Gestor -->
+      <div id="subtab-users" class="hidden bg-card-filled p-4 rounded-2xl shadow-lg">
+        <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] mb-3">Usuarios y Alias</h3>
+        <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
+          <table class="w-full text-xs text-left">
+            <thead>
+              <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
+                <th class="p-2.5">Email</th>
+                <th class="p-2.5">Alias</th>
+                <th class="p-2.5 text-center">Rol</th>
+                <th class="p-2.5 text-center">Acción</th>
+              </tr>
+            </thead>
+            <tbody id="users-table-body" class="divide-y divide-slate-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Informes Gestor -->
+      <div id="subtab-rep" class="hidden space-y-3">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">Totales</span><p id="kpi-tot" class="text-lg font-black text-white">0</p></div>
+          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">Revisados</span><p id="kpi-rev" class="text-lg font-black text-white">0</p></div>
+          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">Pendientes</span><p id="kpi-pen" class="text-lg font-black text-amber-900">0</p></div>
+          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">% Avance</span><p id="kpi-pct" class="text-lg font-black text-white">0%</p></div>
+        </div>
+        <div class="bg-card-filled p-4 rounded-2xl shadow-lg overflow-x-auto">
+          <div class="bg-white/90 rounded-xl shadow p-2">
+            <table class="w-full text-xs text-left">
+              <thead>
+                <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
+                  <th class="p-2.5">Provincia</th>
+                  <th class="p-2.5 text-right">Totales</th>
+                  <th class="p-2.5 text-right">Revisados</th>
+                  <th class="p-2.5 text-right">Pendientes</th>
+                  <th class="p-2.5 text-right">%</th>
+                </tr>
+              </thead>
+              <tbody id="cst-table-body" class="divide-y divide-slate-100"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- MODAL DE REDACCIÓN DE RUTA -->
+  <div id="modal-route" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-md w-full p-4 space-y-3 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-black/10 pb-2">
+        <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+          <i data-lucide="map-pin" class="w-4 h-4 text-[#728157]"></i> Redactar Ruta
+        </h3>
+        <button onclick="closeRouteModal()" class="text-[#2b351d] hover:text-black p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div>
+        <p class="text-[11px] text-[#283219] font-bold mb-1.5">Escribe las poblaciones o puntos visitados:</p>
+        <textarea id="modal-route-textarea" rows="4" class="w-full p-2.5 border-0 rounded-xl text-xs bg-white text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow" placeholder="Ej: Albacete -> Hellín -> Tobarra -> Albacete"></textarea>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2 border-t border-black/10">
+        <button type="button" onclick="closeRouteModal()" class="px-3 py-1.5 bg-white text-[#2a331c] font-bold text-xs rounded-xl shadow hover:bg-slate-100 transition">Cancelar</button>
+        <button type="button" onclick="saveRouteModal()" class="px-4 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Aceptar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA EDICIÓN DE OT -->
+  <div id="modal-edit-ot" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-sm w-full p-4 space-y-3 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-black/10 pb-2">
+        <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Editar OT</h3>
+        <button onclick="closeEditOTModal()" class="text-[#2b351d] hover:text-black"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+      <form id="form-edit-ot" class="space-y-2.5">
+        <input type="hidden" id="edit-ot-id">
+        <div>
+          <label class="block text-[10px] font-black text-[#263018] uppercase mb-0.5">Código OT</label>
+          <input type="text" id="edit-ot-code" required class="w-full p-1.5 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow">
+        </div>
+        <div>
+          <label class="block text-[10px] font-black text-[#263018] uppercase mb-0.5">Técnico Asignado</label>
+          <select id="edit-ot-tech" required class="w-full p-1.5 border-0 rounded-xl text-xs bg-white text-slate-800 shadow"></select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] font-black text-[#263018] uppercase mb-0.5">Totales</label>
+            <input type="number" id="edit-ot-total" min="1" required class="w-full p-1.5 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow">
+          </div>
+          <div>
+            <label class="block text-[10px] font-black text-[#263018] uppercase mb-0.5">Pendientes</label>
+            <input type="number" id="edit-ot-pending" min="0" required class="w-full p-1.5 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow">
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2 border-t border-black/10">
+          <button type="button" onclick="closeEditOTModal()" class="px-3 py-1.5 bg-white text-[#2a331c] font-bold text-xs rounded-xl shadow hover:bg-slate-100 transition">Cancelar</button>
+          <button type="submit" class="px-3 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- INTEGRACIÓN FIREBASE SDK V10 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDgq3wxMrFKQ-1SmSLUxbwyZU6ETAQjzys",
+      authDomain: "ras-geacam.firebaseapp.com",
+      projectId: "ras-geacam",
+      storageBucket: "ras-geacam.firebasestorage.app",
+      messagingSenderId: "845053236217",
+      appId: "1:845053236217:web:0ef3185b767f118ccbe328"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const GESTOR_EMAILS = [
+      'sgonzalez@geacam.com',
+      'arojo@geacam.com'
+    ];
+
+    let currentUser = null;
+    let userRole = 'tecnico';
+    let workOrders = [];
+    let campaigns = [];
+    let usersList = [];
+    let currentOT = null;
+    let mileageLogs = [];
+
+    // Meses en mayúsculas y abreviatura de 3 letras para el nombre del archivo
+    const MESES_TEXTO = [
+      'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
+      'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
+    ];
+    const MESES_ABR = [
+      'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
+      'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
+    ];
+
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      const today = new Date().toISOString().split('T')[0];
+      const curMonth = today.slice(0, 7);
+
+      document.getElementById('reg-date').value = today;
+      document.getElementById('km-date').value = today;
+      document.getElementById('km-filter-month').value = curMonth;
+      document.getElementById('excel-export-month').value = curMonth;
+
+      registerSW();
+    });
+
+    function registerSW() {
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./sw.js').catch(console.error);
+      }
+    }
+
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        currentUser = user;
+        await ensureUserProfile(user);
+
+        const emailLower = user.email.toLowerCase().trim();
+        if (GESTOR_EMAILS.includes(emailLower)) {
+          userRole = 'gestor';
+        } else {
+          try {
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            userRole = userDoc.exists() ? (userDoc.data().role || 'tecnico') : 'tecnico';
+          } catch (e) {
+            userRole = 'tecnico';
+          }
+        }
+
+        document.getElementById('sec-login').classList.add('hidden');
+        document.getElementById('btn-logout').classList.remove('hidden');
+
+        if (userRole === 'gestor') {
+          document.getElementById('role-switcher').classList.remove('hidden');
+        } else {
+          document.getElementById('role-switcher').classList.add('hidden');
+        }
+
+        switchRoleView(userRole === 'gestor' ? 'gestor' : 'tecnico');
+        listenToFirestoreData();
+      } else {
+        currentUser = null;
+        document.getElementById('sec-login').classList.remove('hidden');
+        document.getElementById('sec-tecnico').classList.add('hidden');
+        document.getElementById('sec-gestor').classList.add('hidden');
+        document.getElementById('btn-logout').classList.add('hidden');
+        document.getElementById('user-display-email').innerText = "No autenticado";
+      }
+    });
+
+    async function ensureUserProfile(user) {
+      const uRef = doc(db, "users", user.uid);
+      const snap = await getDoc(uRef);
+      if (!snap.exists()) {
+        const defaultAlias = user.email.split('@')[0].replace('.', ' ');
+        const aliasFormatted = defaultAlias.charAt(0).toUpperCase() + defaultAlias.slice(1);
+        await setDoc(uRef, {
+          email: user.email,
+          alias: aliasFormatted,
+          role: GESTOR_EMAILS.includes(user.email.toLowerCase().trim()) ? 'gestor' : 'tecnico'
+        });
+      }
+    }
+
+    document.getElementById('form-login').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-password').value;
+      const errDiv = document.getElementById('login-error');
+      errDiv.classList.add('hidden');
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch (err) {
+        errDiv.innerText = "Error: " + err.message;
+        errDiv.classList.remove('hidden');
+      }
+    });
+
+    window.handleLogout = () => signOut(auth);
+
+    function listenToFirestoreData() {
+      // Escuchar Usuarios
+      onSnapshot(collection(db, "users"), (snapshot) => {
+        usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const curU = usersList.find(u => u.email === currentUser?.email);
+        const nameToShow = curU?.alias || currentUser?.email || 'Usuario';
+        document.getElementById('user-display-email').innerText = `${nameToShow} (${currentUser?.email})`;
+        populateTechSelects();
+        renderUsersTable();
+      });
+
+      // Escuchar OTs
+      onSnapshot(collection(db, "work_orders"), (snapshot) => {
+        workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        if (userRole === 'tecnico' || !document.getElementById('sec-tecnico').classList.contains('hidden')) {
+          renderOTSelect();
+        }
+        if (userRole === 'gestor') {
+          renderOTTable();
+          renderGestorReports();
+        }
+        if (currentOT) selectOT(currentOT.id);
+        autoFillRecintosForDate();
+      });
+
+      // Escuchar Campañas
+      onSnapshot(collection(db, "campaigns"), (snapshot) => {
+        campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const sel = document.getElementById('ot-camp-sel');
+        sel.innerHTML = '<option value="">-- Campaña --</option>' + campaigns.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+        if (userRole === 'gestor') renderCampTable();
+      });
+
+      // Escuchar Kilometraje
+      onSnapshot(collection(db, "mileage_logs"), (snapshot) => {
+        mileageLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderMileageLogs();
+        prefillMileageDefaults();
+      });
+    }
+
+    function getUserDisplayName(email) {
+      if (!email) return 'Sin Asignar';
+      const found = usersList.find(u => u.email.toLowerCase().trim() === email.toLowerCase().trim());
+      return found?.alias ? `${found.alias} (${email})` : email;
+    }
+
+    function populateTechSelects() {
+      const techSelect = document.getElementById('ot-tech-select');
+      const editTechSelect = document.getElementById('edit-ot-tech');
+      const options = usersList.map(u => `<option value="${u.email}">${u.alias ? u.alias + ' - ' + u.email : u.email}</option>`).join('');
+      if (techSelect) techSelect.innerHTML = '<option value="">-- Seleccionar Técnico --</option>' + options;
+      if (editTechSelect) editTechSelect.innerHTML = options;
+    }
+
+    window.switchRoleView = (role) => {
+      const btnTech = document.getElementById('btn-view-tech');
+      const btnGest = document.getElementById('btn-view-gest');
+
+      if (role === 'tecnico') {
+        document.getElementById('sec-tecnico').classList.remove('hidden');
+        document.getElementById('sec-gestor').classList.add('hidden');
+        btnTech.className = "px-2.5 py-1 rounded-md bg-white text-[#364024] font-bold shadow";
+        btnGest.className = "px-2.5 py-1 rounded-md text-white/90";
+        switchTechSubTab('ots');
+      } else {
+        document.getElementById('sec-gestor').classList.remove('hidden');
+        document.getElementById('sec-tecnico').classList.add('hidden');
+        btnGest.className = "px-2.5 py-1 rounded-md bg-white text-[#364024] font-bold shadow";
+        btnTech.className = "px-2.5 py-1 rounded-md text-white/90";
+        switchGestorSubTab('ots');
+      }
+    };
+
+    window.switchTechSubTab = (subtab) => {
+      document.getElementById('tech-subtab-ots').classList.toggle('hidden', subtab !== 'ots');
+      document.getElementById('tech-subtab-km').classList.toggle('hidden', subtab !== 'km');
+      document.getElementById('tech-subtab-down').classList.toggle('hidden', subtab !== 'down');
+
+      const btnOTs = document.getElementById('tech-tab-btn-ots');
+      const btnKM = document.getElementById('tech-tab-btn-km');
+      const btnDown = document.getElementById('tech-tab-btn-down');
+
+      const activeClass = "flex-1 py-2 text-xs font-black rounded-xl bg-white text-[#2a331c] shadow-sm flex items-center justify-center gap-1.5 transition";
+      const inactiveClass = "flex-1 py-2 text-xs font-black rounded-xl text-[#2a331c] hover:bg-white/40 flex items-center justify-center gap-1.5 transition";
+
+      btnOTs.className = subtab === 'ots' ? activeClass : inactiveClass;
+      btnKM.className = subtab === 'km' ? activeClass : inactiveClass;
+      btnDown.className = subtab === 'down' ? activeClass : inactiveClass;
+
+      if (subtab === 'ots') {
+        renderOTSelect();
+      } else if (subtab === 'km') {
+        renderMileageLogs();
+        prefillMileageDefaults();
+      }
+    };
+
+    // --- LÓGICA DE KILOMETRAJE ---
+    function getSortedUserMileageLogs() {
+      if (!currentUser) return [];
+      return mileageLogs
+        .filter(l => l.usuarioEmail === currentUser.email)
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    }
+
+    function prefillMileageDefaults() {
+      if (document.getElementById('km-edit-id').value) return;
+
+      const userLogs = getSortedUserMileageLogs();
+      if (!userLogs.length) {
+        autoFillRecintosForDate();
+        return;
+      }
+
+      const last = userLogs[0];
+      if (last.gabineteCampo) document.getElementById('km-gab-campo').value = last.gabineteCampo;
+      if (last.actividad) document.getElementById('km-actividad').value = last.actividad;
+      if (last.matricula) document.getElementById('km-matricula').value = last.matricula;
+      if (last.kmFin !== undefined && last.kmFin !== null && last.kmFin > 0) {
+        document.getElementById('km-inicio').value = last.kmFin;
+      } else {
+        document.getElementById('km-inicio').value = '';
+      }
+
+      autoFillRecintosForDate();
+      calcDailyKm();
+    }
+
+    window.handleKmDateChange = () => {
+      autoFillRecintosForDate();
+    };
+
+    function autoFillRecintosForDate() {
+      const targetDate = document.getElementById('km-date')?.value;
+      if (!targetDate || !currentUser) return;
+
+      let totalInspectedThatDay = 0;
+      workOrders.forEach(ot => {
+        if (ot.tecnicoId === currentUser.email && Array.isArray(ot.historialDiario)) {
+          ot.historialDiario.forEach(h => {
+            if (h.fecha === targetDate) totalInspectedThatDay += (parseInt(h.recintosHoy) || 0);
+          });
+        }
+      });
+
+      const rendInput = document.getElementById('km-rendimiento');
+      if (rendInput) rendInput.value = totalInspectedThatDay;
+    }
+
+    window.calcDailyKm = () => {
+      const iniVal = document.getElementById('km-inicio').value;
+      const finVal = document.getElementById('km-fin').value;
+
+      if (iniVal === '' || finVal === '') {
+        document.getElementById('km-total-day').innerText = `0 Km`;
+        return;
+      }
+
+      const ini = parseInt(iniVal) || 0;
+      const fin = parseInt(finVal) || 0;
+      const diff = fin >= ini ? fin - ini : 0;
+      document.getElementById('km-total-day').innerText = `${diff} Km`;
+    };
+
+    window.toggleSplitSchedule = (isChecked) => {
+      document.getElementById('km-split-fields').classList.toggle('hidden', !isChecked);
+    };
+
+    window.toggleSecondaryExpenses = () => {
+      const sec = document.getElementById('section-expenses');
+      const icon = document.getElementById('icon-toggle-expenses');
+      const isHidden = sec.classList.toggle('hidden');
+      icon.style.transform = isHidden ? 'rotate(0deg)' : 'rotate(180deg)';
+    };
+
+    window.openRouteModal = () => {
+      document.getElementById('modal-route-textarea').value = document.getElementById('km-ruta-full').value;
+      document.getElementById('modal-route').classList.remove('hidden');
+      document.getElementById('modal-route-textarea').focus();
+    };
+
+    window.closeRouteModal = () => {
+      document.getElementById('modal-route').classList.add('hidden');
+    };
+
+    window.saveRouteModal = () => {
+      const text = document.getElementById('modal-route-textarea').value.trim();
+      document.getElementById('km-ruta-full').value = text;
+      const displayElem = document.getElementById('km-ruta-display-text');
+      if (text) {
+        displayElem.innerText = text;
+        displayElem.className = "text-slate-800 font-bold truncate";
+      } else {
+        displayElem.innerText = "Toca para escribir municipios o puntos de ruta...";
+        displayElem.className = "text-slate-400 italic truncate";
+      }
+      closeRouteModal();
+    };
+
+    document.getElementById('form-mileage').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) return;
+
+      const editId = document.getElementById('km-edit-id').value;
+      const iniRaw = document.getElementById('km-inicio').value;
+      const finRaw = document.getElementById('km-fin').value;
+
+      const kmIni = iniRaw !== '' ? (parseInt(iniRaw) || 0) : null;
+      const kmFin = finRaw !== '' ? (parseInt(finRaw) || 0) : null;
+
+      // Validación solo si se han introducido ambos kilómetros
+      if (kmIni !== null && kmFin !== null && kmFin < kmIni) {
+        alert("❌ El Km Fin no puede ser menor que el Km Inicio.");
+        return;
+      }
+
+      const kmTotales = (kmIni !== null && kmFin !== null && kmFin >= kmIni) ? (kmFin - kmIni) : 0;
+
+      const isSplit = document.getElementById('km-toggle-split').checked;
+      const curUserDoc = usersList.find(u => u.email === currentUser.email);
+      const aliasName = curUserDoc?.alias || currentUser.email.split('@')[0];
+
+      const payload = {
+        centroCoste: "202-TT-0-086-26",
+        usuarioEmail: currentUser.email,
+        usuarioAlias: aliasName,
+        fecha: document.getElementById('km-date').value,
+        mes: document.getElementById('km-date').value.slice(0, 7),
+        gabineteCampo: document.getElementById('km-gab-campo').value,
+        actividad: document.getElementById('km-actividad').value,
+        rendimientoRecintos: parseInt(document.getElementById('km-rendimiento').value) || 0,
+        horaEntrada1: document.getElementById('km-hora-in-1').value,
+        horaSalida1: document.getElementById('km-hora-out-1').value,
+        jornadaPartida: isSplit,
+        horaEntrada2: isSplit ? (document.getElementById('km-hora-in-2').value || '') : '',
+        horaSalida2: isSplit ? (document.getElementById('km-hora-out-2').value || '') : '',
+        ruta: document.getElementById('km-ruta-full').value,
+        matricula: document.getElementById('km-matricula').value.trim().toUpperCase() || '',
+        kmInicio: kmIni !== null ? kmIni : 0,
+        kmFin: kmFin !== null ? kmFin : 0,
+        kmTotales: kmTotales,
+        repostajeLitros: parseFloat(document.getElementById('km-litros').value) || 0,
+        repostajeImporte: parseFloat(document.getElementById('km-importe-gas').value) || 0,
+        dietaImporte: parseFloat(document.getElementById('km-dieta-valor').value) || 0,
+        otrosGastosImporte: parseFloat(document.getElementById('km-otros-gastos').value) || 0,
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        if (editId) {
+          await updateDoc(doc(db, "mileage_logs", editId), payload);
+          alert("Jornada actualizada correctamente.");
+        } else {
+          await addDoc(collection(db, "mileage_logs"), {
+            ...payload,
+            createdAt: new Date().toISOString()
+          });
+          alert("Jornada guardada correctamente.");
+        }
+        cancelKmEdit();
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      }
+    });
+
+    function renderMileageLogs() {
+      const selectedMonth = document.getElementById('km-filter-month')?.value;
+      const tbody = document.getElementById('km-table-body');
+      const cardsDiv = document.getElementById('km-cards-container');
+      if (!currentUser) return;
+
+      const userLogs = mileageLogs.filter(l => 
+        l.usuarioEmail === currentUser.email && 
+        (!selectedMonth || (l.fecha && l.fecha.startsWith(selectedMonth)))
+      ).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+      let monthTotalKm = 0;
+
+      if (!userLogs.length) {
+        if (tbody) tbody.innerHTML = '<tr><td colspan="7" class="p-3 text-center text-slate-400 italic">No hay jornadas registradas para este mes.</td></tr>';
+        if (cardsDiv) cardsDiv.innerHTML = '<p class="text-xs text-white/90 font-bold text-center py-4 italic">No hay jornadas en este mes.</p>';
+        document.getElementById('km-month-total').innerText = '0 Km';
+        return;
+      }
+
+      // Render Cards Móviles
+      if (cardsDiv) {
+        cardsDiv.innerHTML = userLogs.map(l => {
+          monthTotalKm += (l.kmTotales || 0);
+          const gastosArr = [];
+          if (l.repostajeImporte) gastosArr.push(`${l.repostajeImporte}€ Gas`);
+          if (l.dietaImporte) gastosArr.push(`${l.dietaImporte}€ Dieta`);
+          if (l.otrosGastosImporte) gastosArr.push(`${l.otrosGastosImporte}€ Otros`);
+          const gastosStr = gastosArr.join(' · ') || 'Sin gastos adicionales';
+
+          return `
+            <div class="bg-white p-3.5 rounded-xl text-xs space-y-2.5 shadow">
+              <div class="flex justify-between items-center">
+                <span class="font-bold text-slate-900 text-xs">${l.fecha}</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="px-2 py-0.5 rounded text-[10px] font-bold ${l.gabineteCampo === 'Campo' ? 'bg-[#d2daba] text-[#2c371b]' : 'bg-slate-100 text-slate-700'}">${l.gabineteCampo}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 text-slate-800 font-bold">${l.actividad}</span>
+                </div>
+              </div>
+
+              <div class="text-[11px] text-slate-700 bg-slate-50 p-2.5 rounded-lg border border-slate-100 shadow-inner">
+                <strong>Ruta:</strong> ${l.ruta || '<span class="italic text-slate-400">Sin ruta</span>'}
+              </div>
+
+              <div class="flex justify-between items-center text-[11px] pt-1 border-t border-slate-100">
+                <div>
+                  <span class="text-slate-500 font-bold">Recintos:</span> <strong class="text-[#2c371b] font-bold">${l.rendimientoRecintos || 0}</strong>
+                  <span class="mx-1.5 text-slate-300">|</span>
+                  <span class="text-slate-500 font-bold">Km:</span> <strong class="text-slate-800 font-bold">${l.kmTotales || 0}</strong>
+                </div>
+                <div class="flex gap-1.5">
+                  <button onclick="editMileageLog('${l.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-[#2c371b] rounded-lg font-bold shadow-xs">Editar</button>
+                  <button onclick="deleteMileageLog('${l.id}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-bold shadow-xs">Borrar</button>
+                </div>
+              </div>
+              <div class="text-[10px] text-slate-500 font-medium">${gastosStr}</div>
+            </div>
+          `;
+        }).join('');
+      }
+
+      // Render Tabla Escritorio
+      if (tbody) {
+        tbody.innerHTML = userLogs.map(l => {
+          const gastosArr = [];
+          if (l.repostajeImporte) gastosArr.push(`${l.repostajeImporte}€ Gas`);
+          if (l.dietaImporte) gastosArr.push(`${l.dietaImporte}€ Dieta`);
+          if (l.otrosGastosImporte) gastosArr.push(`${l.otrosGastosImporte}€ Otros`);
+          const gastosStr = gastosArr.join(', ') || '-';
+
+          return `
+            <tr class="hover:bg-slate-50 transition-colors">
+              <td class="p-2.5 font-bold text-slate-800">${l.fecha}</td>
+              <td class="p-2.5">
+                <span class="px-2 py-0.5 rounded text-[10px] font-bold ${l.gabineteCampo === 'Campo' ? 'bg-[#d2daba] text-[#2c371b]' : 'bg-slate-100 text-slate-700'}">${l.gabineteCampo}</span>
+                <span class="font-semibold text-slate-600 ml-1">${l.actividad}</span>
+              </td>
+              <td class="p-2.5 font-medium text-slate-700 max-w-xs truncate">${l.ruta || '-'}</td>
+              <td class="p-2.5 text-right font-bold text-[#2c371b]">${l.rendimientoRecintos || 0}</td>
+              <td class="p-2.5 text-right font-bold text-slate-800">${l.kmTotales || 0}</td>
+              <td class="p-2.5 text-right font-medium text-slate-600">${gastosStr}</td>
+              <td class="p-2.5 text-center space-x-1">
+                <button onclick="editMileageLog('${l.id}')" class="p-1 text-slate-500 hover:text-[#728157] transition"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+                <button onclick="deleteMileageLog('${l.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      document.getElementById('km-month-total').innerText = `${monthTotalKm} Km`;
+      lucide.createIcons();
+    }
+
+    // --- FUNCIÓN DE EXPORTACIÓN Y RELLENADO DE LA PLANTILLA EXCEL ---
+    window.exportMonthlyReportExcel = async () => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para descargar el parte.");
+        return;
+      }
+
+      const selectedMonth = document.getElementById('excel-export-month')?.value;
+      if (!selectedMonth) {
+        alert("Por favor, selecciona un mes y año para exportar.");
+        return;
+      }
+
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      const year = parseInt(yearStr);
+      const monthIdx = parseInt(monthStr) - 1;
+      const monthNameUpper = MESES_TEXTO[monthIdx] || '';
+      const monthAbr = MESES_ABR[monthIdx] || '';
+      const yearShort = yearStr.slice(-2); // "2026" -> "26"
+
+      // Filtrar jornadas de este técnico en este mes
+      const userLogs = mileageLogs.filter(l => 
+        l.usuarioEmail === currentUser.email && 
+        l.fecha && l.fecha.startsWith(selectedMonth)
+      );
+
+      const curUserDoc = usersList.find(u => u.email === currentUser.email);
+      const userAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
+
+      try {
+        // Cargar la plantilla subida al repositorio
+        const response = await fetch('./Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx');
+        if (!response.ok) {
+          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'. Comprueba que el archivo esté subido en la raíz de tu repositorio con ese nombre exacto.");
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        const worksheet = workbook.getWorksheet(1); // Hoja 1: Seguimiento de actividades
+
+        // 1. RELLENAR CABECERA
+        worksheet.getCell('M6').value = year;             // Celda M6: Año
+        worksheet.getCell('O6').value = monthNameUpper;     // Celda O6: Mes en mayúsculas
+        worksheet.getCell('D8').value = userAlias;          // Celda D8: Alias del usuario
+
+        // Obtener el valor de Centro de Coste de M9 de la plantilla (o el valor estándar)
+        const centroCosteM9 = worksheet.getCell('M9').value || "202-TT-0-086-26";
+
+        // 2. RELLENAR DÍAS 1 AL 31 (Filas 14 a 44)
+        for (let dia = 1; dia <= 31; dia++) {
+          const rowNum = 13 + dia; // Día 1 = Fila 14
+          const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
+          const dateStr = `${selectedMonth}-${diaPadded}`;
+
+          const log = userLogs.find(l => l.fecha === dateStr);
+
+          if (log) {
+            // C14: Centro de Coste (solo si hay datos registrados)
+            worksheet.getCell(`C${rowNum}`).value = centroCosteM9;
+
+            // D14: Modalidad
+            worksheet.getCell(`D${rowNum}`).value = log.gabineteCampo || "";
+
+            // E14: Actividad
+            worksheet.getCell(`E${rowNum}`).value = log.actividad || "";
+
+            // F14: Recintos OT (Auto)
+            worksheet.getCell(`F${rowNum}`).value = log.rendimientoRecintos ? Number(log.rendimientoRecintos) : "";
+
+            // G14: Ruta del Vehículo
+            worksheet.getCell(`G${rowNum}`).value = log.ruta || "";
+
+            // I14: Horario (hh:mm - hh:mm)
+            let horarioStr = "";
+            if (log.horaEntrada1 && log.horaSalida1) {
+              horarioStr = `${log.horaEntrada1} - ${log.horaSalida1}`;
+              if (log.jornadaPartida && log.horaEntrada2 && log.horaSalida2) {
+                horarioStr += `   ${log.horaEntrada2} - ${log.horaSalida2}`;
+              }
+            }
+            worksheet.getCell(`I${rowNum}`).value = horarioStr;
+
+            // J14: Matrícula
+            worksheet.getCell(`J${rowNum}`).value = log.matricula || "";
+
+            // K14: Km Inicio
+            worksheet.getCell(`K${rowNum}`).value = (log.kmInicio !== undefined && log.kmInicio !== null && log.kmInicio > 0) ? Number(log.kmInicio) : "";
+
+            // L14: Km Fin
+            worksheet.getCell(`L${rowNum}`).value = (log.kmFin !== undefined && log.kmFin !== null && log.kmFin > 0) ? Number(log.kmFin) : "";
+
+            // M14: Km Total (L14 - K14)
+            const kmIniNum = (log.kmInicio !== undefined && log.kmInicio !== null) ? Number(log.kmInicio) : null;
+            const kmFinNum = (log.kmFin !== undefined && log.kmFin !== null) ? Number(log.kmFin) : null;
+            const kmTot = (kmIniNum !== null && kmFinNum !== null && kmFinNum >= kmIniNum) ? (kmFinNum - kmIniNum) : 0;
+            worksheet.getCell(`M${rowNum}`).value = kmTot;
+
+            // O14: Dieta (€)
+            worksheet.getCell(`O${rowNum}`).value = log.dietaImporte ? Number(log.dietaImporte) : "";
+
+            // P14: Otros gastos (€)
+            worksheet.getCell(`P${rowNum}`).value = log.otrosGastosImporte ? Number(log.otrosGastosImporte) : "";
+          }
+        }
+
+        // 3. GENERAR ARCHIVO Y DESCARGAR
+        const buffer = await workbook.xlsx.writeBuffer();
+        const fileName = `Parte_Seguimiento_Mensual_Actividades_Geacam_${monthAbr}_${yearShort}.xlsx`;
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        saveAs(blob, fileName);
+
+      } catch (err) {
+        alert("❌ Error: " + err.message);
+      }
+    };
+
+    window.editMileageLog = (id) => {
+      const log = mileageLogs.find(l => l.id === id);
+      if (!log) return;
+
+      document.getElementById('km-edit-id').value = log.id;
+      document.getElementById('km-date').value = log.fecha || '';
+      document.getElementById('km-gab-campo').value = log.gabineteCampo || 'Campo';
+      document.getElementById('km-actividad').value = log.actividad || 'CST-AY';
+      document.getElementById('km-rendimiento').value = log.rendimientoRecintos || 0;
+      document.getElementById('km-hora-in-1').value = log.horaEntrada1 || '';
+      document.getElementById('km-hora-out-1').value = log.horaSalida1 || '';
+
+      const isSplit = !!log.jornadaPartida;
+      document.getElementById('km-toggle-split').checked = isSplit;
+      toggleSplitSchedule(isSplit);
+      document.getElementById('km-hora-in-2').value = log.horaEntrada2 || '';
+      document.getElementById('km-hora-out-2').value = log.horaSalida2 || '';
+
+      document.getElementById('km-ruta-full').value = log.ruta || '';
+      const displayElem = document.getElementById('km-ruta-display-text');
+      if (log.ruta) {
+        displayElem.innerText = log.ruta;
+        displayElem.className = "text-slate-800 font-bold truncate";
+      } else {
+        displayElem.innerText = "Toca para escribir municipios o puntos de ruta...";
+        displayElem.className = "text-slate-400 italic truncate";
+      }
+
+      document.getElementById('km-matricula').value = log.matricula || '';
+      document.getElementById('km-inicio').value = (log.kmInicio !== undefined && log.kmInicio !== null && log.kmInicio > 0) ? log.kmInicio : '';
+      document.getElementById('km-fin').value = (log.kmFin !== undefined && log.kmFin !== null && log.kmFin > 0) ? log.kmFin : '';
+      calcDailyKm();
+
+      document.getElementById('km-litros').value = log.repostajeLitros || '';
+      document.getElementById('km-importe-gas').value = log.repostajeImporte || '';
+      document.getElementById('km-dieta-valor').value = log.dietaImporte || '';
+      document.getElementById('km-otros-gastos').value = log.otrosGastosImporte || '';
+
+      if (log.repostajeImporte || log.dietaImporte || log.otrosGastosImporte) {
+        document.getElementById('section-expenses').classList.remove('hidden');
+        document.getElementById('icon-toggle-expenses').style.transform = 'rotate(180deg)';
+      }
+
+      document.getElementById('km-form-title').innerText = `Editando Día: ${log.fecha}`;
+      document.getElementById('btn-submit-km').innerText = `Guardar Cambios`;
+      document.getElementById('btn-cancel-km-edit').classList.remove('hidden');
+
+      lucide.createIcons();
+      window.scrollTo({ top: document.getElementById('form-mileage').offsetTop - 60, behavior: 'smooth' });
+    };
+
+    window.cancelKmEdit = () => {
+      document.getElementById('km-edit-id').value = '';
+      document.getElementById('form-mileage').reset();
+
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('km-date').value = today;
+      document.getElementById('km-ruta-full').value = '';
+      const displayElem = document.getElementById('km-ruta-display-text');
+      displayElem.innerText = "Toca para escribir municipios o puntos de ruta...";
+      displayElem.className = "text-slate-400 italic truncate";
+
+      toggleSplitSchedule(false);
+      document.getElementById('section-expenses').classList.add('hidden');
+      document.getElementById('icon-toggle-expenses').style.transform = 'rotate(0deg)';
+
+      document.getElementById('km-form-title').innerText = `Registro Diario de Jornada`;
+      document.getElementById('btn-submit-km').innerText = `Guardar Jornada`;
+      document.getElementById('btn-cancel-km-edit').classList.add('hidden');
+
+      prefillMileageDefaults();
+      lucide.createIcons();
+    };
+
+    window.deleteMileageLog = async (id) => {
+      if (confirm("¿Deseas eliminar este registro de jornada?")) {
+        try {
+          await deleteDoc(doc(db, "mileage_logs", id));
+          alert("Jornada eliminada.");
+        } catch (e) {
+          alert("Error: " + e.message);
+        }
+      }
+    };
+
+    // --- MÉTODOS EXISTENTES OTs Y GESTOR ---
+    function renderOTSelect() {
+      const select = document.getElementById('ot-select');
+      select.innerHTML = '<option value="">-- Selecciona una OT --</option>';
+
+      const myOTs = workOrders.filter(ot => ot.tecnicoId === currentUser.email || userRole === 'gestor');
+
+      myOTs.forEach(ot => {
+        const opt = document.createElement('option');
+        opt.value = ot.id;
+        const isDone = ot.recintosRestantes === 0;
+        opt.innerText = `${isDone ? '✔ [FINALIZADA] ' : ''}${ot.nombre} - ${ot.provincia}`;
+        if (isDone) opt.className = 'ot-completed-option';
+        select.appendChild(opt);
+      });
+
+      const lastId = localStorage.getItem('ras_last_ot_' + currentUser.email);
+      if (lastId && myOTs.some(o => o.id === lastId)) {
+        select.value = lastId;
+        selectOT(lastId);
+      }
+    }
+
+    window.selectOT = (id) => {
+      if (!id) {
+        document.getElementById('ot-card').classList.add('hidden');
+        currentOT = null;
+        return;
+      }
+      localStorage.setItem('ras_last_ot_' + currentUser.email, id);
+      currentOT = workOrders.find(o => o.id === id);
+      if (!currentOT) return;
+
+      document.getElementById('ot-card').classList.remove('hidden');
+      document.getElementById('ot-card-title').innerText = currentOT.nombre;
+      document.getElementById('ot-card-subtitle').innerText = `Provincia: ${currentOT.provincia}`;
+      document.getElementById('ot-card-tech').innerText = `Técnico: ${getUserDisplayName(currentOT.tecnicoId)}`;
+
+      const visited = currentOT.recintosTotales - currentOT.recintosRestantes;
+      document.getElementById('ot-total-val').innerText = currentOT.recintosTotales;
+      document.getElementById('ot-visited-val').innerText = visited;
+      document.getElementById('ot-pending-val').innerText = currentOT.recintosRestantes;
+
+      const badge = document.getElementById('ot-card-badge');
+      if (currentOT.recintosRestantes === 0) {
+        badge.innerText = "Finalizada";
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#2c371b] shadow";
+      } else {
+        badge.innerText = "En Progreso";
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 shadow";
+      }
+
+      renderOTHistory();
+    };
+
+    function renderOTHistory() {
+      const histDiv = document.getElementById('ot-history-container');
+      const hist = currentOT?.historialDiario || [];
+
+      if (!hist.length) {
+        histDiv.innerHTML = '<p class="text-xs text-white/90 font-bold italic">No hay registros diarios todavía.</p>';
+        return;
+      }
+
+      histDiv.innerHTML = hist.map((h, idx) => `
+        <div class="bg-white/90 p-2.5 rounded-xl text-xs flex justify-between items-center shadow">
+          <div>
+            <span class="font-bold text-slate-700">${h.fecha}</span> — Rev: <strong class="text-[#2c371b]">${h.recintosHoy}</strong> (Pend: ${h.recintosPendientes})
+          </div>
+          <div class="flex gap-1">
+            <button onclick="editHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-[#728157] transition"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="deleteHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-rose-700 transition"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+          </div>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    document.getElementById('form-daily').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentOT) return;
+
+      const pendingNew = parseInt(document.getElementById('reg-pending').value);
+      if (pendingNew > currentOT.recintosTotales) {
+        alert(`❌ Los recintos pendientes no pueden superar el total (${currentOT.recintosTotales}).`);
+        return;
+      }
+
+      const visitedToday = currentOT.recintosRestantes - pendingNew;
+      const newHistory = [...(currentOT.historialDiario || [])];
+      newHistory.unshift({
+        fecha: document.getElementById('reg-date').value,
+        recintosPendientes: pendingNew,
+        recintosHoy: visitedToday > 0 ? visitedToday : 0
+      });
+
+      try {
+        await updateDoc(doc(db, "work_orders", currentOT.id), {
+          recintosRestantes: pendingNew,
+          estado: pendingNew === 0 ? 'completada' : 'en_progreso',
+          historialDiario: newHistory
+        });
+        alert("Visita guardada.");
+        autoFillRecintosForDate();
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    });
+
+    window.editHistoryItem = async (index) => {
+      if (!currentOT) return;
+      const hist = currentOT.historialDiario || [];
+      const item = hist[index];
+      if (!item) return;
+
+      const newPending = prompt(`Modificar pendientes para ${item.fecha}:`, item.recintosPendientes);
+      if (newPending === null) return;
+
+      const valPending = parseInt(newPending);
+      if (isNaN(valPending) || valPending < 0) return;
+
+      hist[index].recintosPendientes = valPending;
+      const latestPending = hist[0].recintosPendientes;
+
+      try {
+        await updateDoc(doc(db, "work_orders", currentOT.id), {
+          recintosRestantes: latestPending,
+          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          historialDiario: hist
+        });
+        autoFillRecintosForDate();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    };
+
+    window.deleteHistoryItem = async (index) => {
+      if (!currentOT || !confirm("¿Eliminar este registro de visita?")) return;
+      const hist = [...(currentOT.historialDiario || [])];
+      hist.splice(index, 1);
+      const latestPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
+
+      try {
+        await updateDoc(doc(db, "work_orders", currentOT.id), {
+          recintosRestantes: latestPending,
+          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          historialDiario: hist
+        });
+        autoFillRecintosForDate();
+      } catch (e) {
+        alert("Error: " + e.message);
+      }
+    };
+
+    window.updateOTRecintosLimitHint = () => {
+      const campId = document.getElementById('ot-camp-sel').value;
+      const prov = document.getElementById('ot-prov-sel').value;
+      const hint = document.getElementById('ot-recintos-hint');
+
+      if (!campId || !prov) {
+        hint.innerHTML = `Selecciona una campaña y provincia.`;
+        return;
+      }
+
+      const camp = campaigns.find(c => c.id === campId);
+      const totalCampProv = camp?.provBreakdown?.[prov] || 0;
+      const assigned = workOrders
+        .filter(o => o.campaniaId === campId && o.provincia === prov)
+        .reduce((sum, o) => sum + (parseInt(o.recintosTotales) || 0), 0);
+      const available = totalCampProv - assigned;
+
+      if (available <= 0) {
+        hint.className = "text-[11px] bg-rose-50 text-rose-800 p-2.5 rounded-xl font-bold shadow";
+        hint.innerHTML = `Límite alcanzado en ${prov}. Planificados: ${totalCampProv}, Asignados: ${assigned}.`;
+      } else {
+        hint.className = "text-[11px] bg-white text-[#252f18] p-2.5 rounded-xl font-bold shadow";
+        hint.innerHTML = `Disponibles en ${prov}: <strong>${available}</strong> de ${totalCampProv}.`;
+      }
+    };
+
+    document.getElementById('form-ot').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const campId = document.getElementById('ot-camp-sel').value;
+      const prov = document.getElementById('ot-prov-sel').value;
+      const totalRecs = parseInt(document.getElementById('ot-recintos').value);
+
+      const camp = campaigns.find(c => c.id === campId);
+      const totalCampProv = camp?.provBreakdown?.[prov] || 0;
+      const assigned = workOrders
+        .filter(o => o.campaniaId === campId && o.provincia === prov)
+        .reduce((sum, o) => sum + (parseInt(o.recintosTotales) || 0), 0);
+      const available = totalCampProv - assigned;
+
+      if (totalRecs > available) {
+        alert(`❌ Supera el disponible. Solo quedan ${available} recintos.`);
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, "work_orders"), {
+          nombre: document.getElementById('ot-code').value,
+          campaniaId: campId,
+          provincia: prov,
+          tecnicoId: document.getElementById('ot-tech-select').value,
+          recintosTotales: totalRecs,
+          recintosRestantes: totalRecs,
+          estado: 'en_progreso',
+          historialDiario: []
+        });
+        document.getElementById('ot-code').value = '';
+        document.getElementById('ot-recintos').value = '';
+        updateOTRecintosLimitHint();
+        alert("OT generada correctamente.");
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    });
+
+    window.renderOTTable = () => {
+      const filter = (document.getElementById('filter-ot-table')?.value || '').toLowerCase();
+      const tbody = document.getElementById('ot-table-body');
+      const filtered = workOrders.filter(o => 
+        (o.nombre || '').toLowerCase().includes(filter) ||
+        (o.provincia || '').toLowerCase().includes(filter) ||
+        getUserDisplayName(o.tecnicoId).toLowerCase().includes(filter)
+      );
+
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="p-3 text-center text-slate-400 italic">No hay OTs.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(o => {
+        const isDone = o.recintosRestantes === 0;
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-2.5 font-bold text-slate-800">${o.nombre}</td>
+            <td class="p-2.5">${o.provincia}</td>
+            <td class="p-2.5 text-slate-700">${getUserDisplayName(o.tecnicoId)}</td>
+            <td class="p-2.5 text-right font-semibold">${o.recintosTotales}</td>
+            <td class="p-2.5 text-right font-bold ${isDone ? 'text-[#2c371b]' : 'text-amber-700'}">${o.recintosRestantes}</td>
+            <td class="p-2.5 text-center">
+              <span class="px-2 py-0.5 rounded-full text-[9px] font-bold ${isDone ? 'bg-[#d2daba] text-[#2c371b]' : 'bg-amber-100 text-amber-900'}">
+                ${isDone ? 'FIN' : 'PROG'}
+              </span>
+            </td>
+            <td class="p-2.5 text-center space-x-1">
+              <button onclick="openEditOTModal('${o.id}')" class="p-1 text-slate-500 hover:text-[#728157] transition"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+              <button onclick="deleteOT('${o.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    };
+
+    window.openEditOTModal = (otId) => {
+      const ot = workOrders.find(o => o.id === otId);
+      if (!ot) return;
+      document.getElementById('edit-ot-id').value = ot.id;
+      document.getElementById('edit-ot-code').value = ot.nombre || '';
+      document.getElementById('edit-ot-tech').value = ot.tecnicoId || '';
+      document.getElementById('edit-ot-total').value = ot.recintosTotales || 0;
+      document.getElementById('edit-ot-pending').value = ot.recintosRestantes || 0;
+      document.getElementById('modal-edit-ot').classList.remove('hidden');
+    };
+
+    window.closeEditOTModal = () => document.getElementById('modal-edit-ot').classList.add('hidden');
+
+    document.getElementById('form-edit-ot').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const otId = document.getElementById('edit-ot-id').value;
+      const newCode = document.getElementById('edit-ot-code').value;
+      const newTech = document.getElementById('edit-ot-tech').value;
+      const newTotal = parseInt(document.getElementById('edit-ot-total').value);
+      const newPending = parseInt(document.getElementById('edit-ot-pending').value);
+
+      try {
+        await updateDoc(doc(db, "work_orders", otId), {
+          nombre: newCode,
+          tecnicoId: newTech,
+          recintosTotales: newTotal,
+          recintosRestantes: newPending,
+          estado: newPending === 0 ? 'completada' : 'en_progreso'
+        });
+        closeEditOTModal();
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    });
+
+    window.deleteOT = async (otId) => {
+      if (confirm("¿Eliminar esta OT?")) {
+        try {
+          await deleteDoc(doc(db, "work_orders", otId));
+        } catch(e) {
+          alert("Error: " + e.message);
+        }
+      }
+    };
+
+    document.getElementById('form-campaign').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const provBreakdown = {
+        Albacete: parseInt(document.getElementById('c-alb').value) || 0,
+        'Ciudad Real': parseInt(document.getElementById('c-cr').value) || 0,
+        Cuenca: parseInt(document.getElementById('c-cu').value) || 0,
+        Guadalajara: parseInt(document.getElementById('c-gu').value) || 0,
+        Toledo: parseInt(document.getElementById('c-to').value) || 0
+      };
+      const total = Object.values(provBreakdown).reduce((a, b) => a + b, 0);
+
+      try {
+        await addDoc(collection(db, "campaigns"), {
+          nombre: document.getElementById('camp-name').value,
+          provBreakdown,
+          recintosTotales: total,
+          fechaInicio: new Date().toISOString()
+        });
+        document.getElementById('camp-name').value = '';
+        alert("Planificación guardada.");
+      } catch (error) {
+        alert("Error: " + error.message);
+      }
+    });
+
+    window.renderCampTable = () => {
+      const tbody = document.getElementById('camp-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = campaigns.map(c => {
+        const pb = c.provBreakdown || {};
+        const total = c.recintosTotales || 0;
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-2.5 font-bold text-slate-800">${c.nombre}</td>
+            <td class="p-2.5 text-right text-slate-600">${pb.Albacete || 0}</td>
+            <td class="p-2.5 text-right text-slate-600">${pb['Ciudad Real'] || 0}</td>
+            <td class="p-2.5 text-right text-slate-600">${pb.Cuenca || 0}</td>
+            <td class="p-2.5 text-right text-slate-600">${pb.Guadalajara || 0}</td>
+            <td class="p-2.5 text-right text-slate-600">${pb.Toledo || 0}</td>
+            <td class="p-2.5 text-right font-black text-[#202715]">${total}</td>
+            <td class="p-2.5 text-center">
+              <button onclick="deleteCampaign('${c.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+      lucide.createIcons();
+    };
+
+    window.deleteCampaign = async (campId) => {
+      if (confirm("¿Eliminar planificación?")) {
+        await deleteDoc(doc(db, "campaigns", campId));
+      }
+    };
+
+    function renderUsersTable() {
+      const tbody = document.getElementById('users-table-body');
+      if (!tbody) return;
+      tbody.innerHTML = usersList.map(u => `
+        <tr class="hover:bg-slate-50 transition-colors">
+          <td class="p-2.5 font-medium text-slate-700 truncate max-w-[120px]">${u.email}</td>
+          <td class="p-2.5 font-bold text-slate-800">${u.alias || '-'}</td>
+          <td class="p-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${u.role === 'gestor' ? 'bg-[#d2daba] text-[#2c371b]' : 'bg-slate-100 text-slate-700'}">${(u.role || 'tecnico').toUpperCase()}</span></td>
+          <td class="p-2.5 text-center"><button onclick="editUserAlias('${u.id}', '${u.alias || ''}')" class="px-2 py-0.5 bg-white text-[#2c371b] text-[10px] font-bold rounded shadow-xs hover:bg-slate-100 transition">Editar</button></td>
+        </tr>
+      `).join('');
+    }
+
+    window.editUserAlias = async (userId, currentAlias) => {
+      const newAlias = prompt("Nombre o Alias del usuario:", currentAlias);
+      if (newAlias === null) return;
+      const newRole = confirm("¿Es Gestor? (Aceptar = Sí / Cancelar = No)") ? 'gestor' : 'tecnico';
+      await updateDoc(doc(db, "users", userId), { alias: newAlias.trim(), role: newRole });
+    };
+
+    function renderGestorReports() {
+      const provs = ['Albacete', 'Ciudad Real', 'Cuenca', 'Guadalajara', 'Toledo'];
+      let totCtrl = 0, totRev = 0, totPend = 0;
+      const tbody = document.getElementById('cst-table-body');
+      if (!tbody) return;
+
+      tbody.innerHTML = provs.map(p => {
+        const ots = workOrders.filter(o => o.provincia === p);
+        const ctrl = ots.reduce((a, b) => a + (b.recintosTotales || 0), 0);
+        const pend = ots.reduce((a, b) => a + (b.recintosRestantes || 0), 0);
+        const rev = ctrl - pend;
+        const pct = ctrl ? ((rev / ctrl) * 100).toFixed(1) : '0.0';
+
+        totCtrl += ctrl; totRev += rev; totPend += pend;
+
+        return `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-2.5 font-bold text-slate-800">${p}</td>
+            <td class="p-2.5 text-right">${ctrl}</td>
+            <td class="p-2.5 text-right font-bold text-[#2c371b]">${rev}</td>
+            <td class="p-2.5 text-right font-bold text-amber-800">${pend}</td>
+            <td class="p-2.5 text-right font-black">${pct}%</td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById('kpi-tot').innerText = totCtrl;
+      document.getElementById('kpi-rev').innerText = totRev;
+      document.getElementById('kpi-pen').innerText = totPend;
+      document.getElementById('kpi-pct').innerText = totCtrl ? `${((totRev / totCtrl) * 100).toFixed(1)}%` : '0%';
+    }
+
+    window.calcCampTotal = () => {
+      const sum = ['c-alb', 'c-cr', 'c-cu', 'c-gu', 'c-to'].reduce((a, id) => a + (parseInt(document.getElementById(id).value) || 0), 0);
+      document.getElementById('camp-total-sum').innerText = `${sum} Recintos`;
+    };
+
+    window.switchGestorSubTab = (tab) => {
+      document.getElementById('subtab-ots').classList.toggle('hidden', tab !== 'ots');
+      document.getElementById('subtab-plan').classList.toggle('hidden', tab !== 'plan');
+      document.getElementById('subtab-users').classList.toggle('hidden', tab !== 'users');
+      document.getElementById('subtab-rep').classList.toggle('hidden', tab !== 'rep');
+
+      const btnOTs = document.getElementById('tab-btn-ots');
+      const btnPlan = document.getElementById('tab-btn-plan');
+      const btnUsers = document.getElementById('tab-btn-users');
+      const btnRep = document.getElementById('tab-btn-rep');
+
+      const activeClass = "px-3 py-2 font-bold border-b-2 border-main-primary text-[#242c17] whitespace-nowrap";
+      const inactiveClass = "px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]";
+
+      btnOTs.className = tab === 'ots' ? activeClass : inactiveClass;
+      btnPlan.className = tab === 'plan' ? activeClass : inactiveClass;
+      btnUsers.className = tab === 'users' ? activeClass : inactiveClass;
+      btnRep.className = tab === 'rep' ? activeClass : inactiveClass;
+
+      if (tab === 'ots') renderOTTable();
+      if (tab === 'plan') renderCampTable();
+      if (tab === 'users') renderUsersTable();
+      if (tab === 'rep') renderGestorReports();
+    };
+
+    window.filterOTOptions = () => {
+      const text = document.getElementById('ot-search-input').value.toLowerCase();
+      const select = document.getElementById('ot-select');
+      Array.from(select.options).forEach(opt => {
+        if (!opt.value) return;
+        opt.style.display = opt.innerText.toLowerCase().includes(text) ? '' : 'none';
+      });
+    };
+  </script>
+</body>
+</html>
