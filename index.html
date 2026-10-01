@@ -4,15 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>RAS - Control de Campo y Ordenes de Trabajo</title>
-  <link rel="manifest" href="manifest.json">
+  
+  <!-- Configuración PWA e Iconos -->
+  <link rel="manifest" href="./manifest.json">
   <meta name="theme-color" content="#89986D">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="RAS Campo">
+
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- ExcelJS y FileSaver para rellenar la plantilla XLSX -->
+  <!-- Librerías para exportar a Excel -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  
   <style>
     :root {
       --color-primary: #89986D;
@@ -113,7 +121,6 @@
 
       <!-- SUB-PESTAÑA 1: CONTROL DE OTS -->
       <div id="tech-subtab-ots" class="max-w-xl mx-auto space-y-4">
-        <!-- Tarjeta Selector OT -->
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-2.5">
           <label class="block text-[11px] font-black text-[#222a16] uppercase">Orden de Trabajo (OT)</label>
           <div class="relative">
@@ -136,7 +143,6 @@
             <span id="ot-card-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#3c4728] shadow">En Progreso</span>
           </div>
 
-          <!-- Métricas OT -->
           <div class="grid grid-cols-3 gap-2.5 text-center">
             <div class="bg-white p-2.5 rounded-xl shadow">
               <span class="block text-[9px] font-black text-slate-500 uppercase">Totales</span>
@@ -181,8 +187,6 @@
 
       <!-- SUB-PESTAÑA 2: RUTAS Y KILOMETRAJE -->
       <div id="tech-subtab-km" class="hidden max-w-xl mx-auto space-y-4">
-
-        <!-- Formulario Diario (Tarjeta Contenedora) -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-center justify-between border-b border-black/10 pb-2.5">
             <h3 id="km-form-title" class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
@@ -286,7 +290,7 @@
               <input type="hidden" id="km-ruta-full" value="">
             </div>
 
-            <!-- BLOQUE: VEHÍCULO Y KM (No obligatorios) -->
+            <!-- BLOQUE: VEHÍCULO Y KM -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
               <div class="grid grid-cols-3 gap-2 items-end">
                 <div>
@@ -339,7 +343,6 @@
               </div>
             </div>
 
-            <!-- Botón Guardar -->
             <button type="submit" id="btn-submit-km" class="w-full py-3 bg-main-primary hover:bg-main-primary-dark active:scale-[0.99] text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
               <i data-lucide="save" class="w-4 h-4"></i> Guardar Jornada
             </button>
@@ -359,10 +362,8 @@
             </div>
           </div>
 
-          <!-- Cards para móvil -->
           <div id="km-cards-container" class="space-y-2 block sm:hidden"></div>
 
-          <!-- Tabla para escritorio -->
           <div class="hidden sm:block overflow-x-auto bg-white/90 rounded-xl shadow p-2">
             <table class="w-full text-xs text-left">
               <thead>
@@ -380,20 +381,17 @@
             </table>
           </div>
         </div>
-
       </div>
 
       <!-- SUB-PESTAÑA 3: DESCARGAS DE DOCUMENTACIÓN / PARTES -->
       <div id="tech-subtab-down" class="hidden max-w-xl mx-auto space-y-4">
-        
-        <!-- Tarjeta: Seguimiento Mensual de Actividades (Geacam) -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
               <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
                 <i data-lucide="file-spreadsheet" class="w-5 h-5 text-[#2e371f]"></i> Seguimiento Mensual de Actividades
               </h3>
-              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Control de vehículos, actividades y control de costes (GEACAM)</p>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Control de vehículos, actividades y costes (GEACAM)</p>
             </div>
             <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Excel Oficial</span>
           </div>
@@ -402,7 +400,6 @@
             Genera y descarga la plantilla cumplimentada automáticamente con todas las jornadas, rutas, recintos y gastos registrados en el mes seleccionado.
           </p>
 
-          <!-- Bloque de Selección de Mes y Botón de Descarga -->
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
             <div>
               <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Seleccionar Mes y Año:</label>
@@ -414,8 +411,6 @@
             </button>
           </div>
         </div>
-
-        <!-- Espacio preparado para futuros informes (se pueden añadir más tarjetas aquí) -->
       </div>
     </section>
 
@@ -676,7 +671,6 @@
     let currentOT = null;
     let mileageLogs = [];
 
-    // Meses en mayúsculas y abreviatura de 3 letras para el nombre del archivo
     const MESES_TEXTO = [
       'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
       'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
@@ -985,7 +979,6 @@
       const kmIni = iniRaw !== '' ? (parseInt(iniRaw) || 0) : null;
       const kmFin = finRaw !== '' ? (parseInt(finRaw) || 0) : null;
 
-      // Validación solo si se han introducido ambos kilómetros
       if (kmIni !== null && kmFin !== null && kmFin < kmIni) {
         alert("❌ El Km Fin no puede ser menor que el Km Inicio.");
         return;
@@ -1060,7 +1053,6 @@
         return;
       }
 
-      // Render Cards Móviles
       if (cardsDiv) {
         cardsDiv.innerHTML = userLogs.map(l => {
           monthTotalKm += (l.kmTotales || 0);
@@ -1101,7 +1093,6 @@
         }).join('');
       }
 
-      // Render Tabla Escritorio
       if (tbody) {
         tbody.innerHTML = userLogs.map(l => {
           const gastosArr = [];
@@ -1152,9 +1143,8 @@
       const monthIdx = parseInt(monthStr) - 1;
       const monthNameUpper = MESES_TEXTO[monthIdx] || '';
       const monthAbr = MESES_ABR[monthIdx] || '';
-      const yearShort = yearStr.slice(-2); // "2026" -> "26"
+      const yearShort = yearStr.slice(-2);
 
-      // Filtrar jornadas de este técnico en este mes
       const userLogs = mileageLogs.filter(l => 
         l.usuarioEmail === currentUser.email && 
         l.fecha && l.fecha.startsWith(selectedMonth)
@@ -1164,51 +1154,39 @@
       const userAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
 
       try {
-        // Cargar la plantilla subida al repositorio
         const response = await fetch('./Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx');
         if (!response.ok) {
-          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'. Comprueba que el archivo esté subido en la raíz de tu repositorio con ese nombre exacto.");
+          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'. Asegúrate de que el archivo esté subido en la raíz de tu repositorio con ese nombre exacto.");
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.getWorksheet(1); // Hoja 1: Seguimiento de actividades
+        const worksheet = workbook.getWorksheet(1);
 
-        // 1. RELLENAR CABECERA
-        worksheet.getCell('M6').value = year;             // Celda M6: Año
-        worksheet.getCell('O6').value = monthNameUpper;     // Celda O6: Mes en mayúsculas
-        worksheet.getCell('D8').value = userAlias;          // Celda D8: Alias del usuario
+        // 1. Cabecera
+        worksheet.getCell('M6').value = year;
+        worksheet.getCell('O6').value = monthNameUpper;
+        worksheet.getCell('D8').value = userAlias;
 
-        // Obtener el valor de Centro de Coste de M9 de la plantilla (o el valor estándar)
         const centroCosteM9 = worksheet.getCell('M9').value || "202-TT-0-086-26";
 
-        // 2. RELLENAR DÍAS 1 AL 31 (Filas 14 a 44)
+        // 2. Días 1 al 31 (Filas 14 a 44)
         for (let dia = 1; dia <= 31; dia++) {
-          const rowNum = 13 + dia; // Día 1 = Fila 14
+          const rowNum = 13 + dia;
           const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
           const dateStr = `${selectedMonth}-${diaPadded}`;
 
           const log = userLogs.find(l => l.fecha === dateStr);
 
           if (log) {
-            // C14: Centro de Coste (solo si hay datos registrados)
             worksheet.getCell(`C${rowNum}`).value = centroCosteM9;
-
-            // D14: Modalidad
             worksheet.getCell(`D${rowNum}`).value = log.gabineteCampo || "";
-
-            // E14: Actividad
             worksheet.getCell(`E${rowNum}`).value = log.actividad || "";
-
-            // F14: Recintos OT (Auto)
             worksheet.getCell(`F${rowNum}`).value = log.rendimientoRecintos ? Number(log.rendimientoRecintos) : "";
-
-            // G14: Ruta del Vehículo
             worksheet.getCell(`G${rowNum}`).value = log.ruta || "";
 
-            // I14: Horario (hh:mm - hh:mm)
             let horarioStr = "";
             if (log.horaEntrada1 && log.horaSalida1) {
               horarioStr = `${log.horaEntrada1} - ${log.horaSalida1}`;
@@ -1218,30 +1196,20 @@
             }
             worksheet.getCell(`I${rowNum}`).value = horarioStr;
 
-            // J14: Matrícula
             worksheet.getCell(`J${rowNum}`).value = log.matricula || "";
-
-            // K14: Km Inicio
             worksheet.getCell(`K${rowNum}`).value = (log.kmInicio !== undefined && log.kmInicio !== null && log.kmInicio > 0) ? Number(log.kmInicio) : "";
-
-            // L14: Km Fin
             worksheet.getCell(`L${rowNum}`).value = (log.kmFin !== undefined && log.kmFin !== null && log.kmFin > 0) ? Number(log.kmFin) : "";
 
-            // M14: Km Total (L14 - K14)
             const kmIniNum = (log.kmInicio !== undefined && log.kmInicio !== null) ? Number(log.kmInicio) : null;
             const kmFinNum = (log.kmFin !== undefined && log.kmFin !== null) ? Number(log.kmFin) : null;
             const kmTot = (kmIniNum !== null && kmFinNum !== null && kmFinNum >= kmIniNum) ? (kmFinNum - kmIniNum) : 0;
             worksheet.getCell(`M${rowNum}`).value = kmTot;
 
-            // O14: Dieta (€)
             worksheet.getCell(`O${rowNum}`).value = log.dietaImporte ? Number(log.dietaImporte) : "";
-
-            // P14: Otros gastos (€)
             worksheet.getCell(`P${rowNum}`).value = log.otrosGastosImporte ? Number(log.otrosGastosImporte) : "";
           }
         }
 
-        // 3. GENERAR ARCHIVO Y DESCARGAR
         const buffer = await workbook.xlsx.writeBuffer();
         const fileName = `Parte_Seguimiento_Mensual_Actividades_Geacam_${monthAbr}_${yearShort}.xlsx`;
         const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
@@ -1337,7 +1305,7 @@
       }
     };
 
-    // --- MÉTODOS EXISTENTES OTs Y GESTOR ---
+    // --- MÉTODOS OTs Y GESTOR ---
     function renderOTSelect() {
       const select = document.getElementById('ot-select');
       select.innerHTML = '<option value="">-- Selecciona una OT --</option>';
