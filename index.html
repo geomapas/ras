@@ -295,7 +295,7 @@
               <div class="grid grid-cols-3 gap-2 items-end">
                 <div>
                   <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Matrícula</label>
-                  <input type="text" id="km-matricula" placeholder="0000-XXX" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                  <input type="text" id="km-matricula" onchange="handleKmPlateOrDateChange()" placeholder="0000-XXX" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
                 </div>
                 <div>
                   <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Km Inicio</label>
@@ -913,6 +913,19 @@
         .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
     }
 
+    // Busca la última jornada previa registrada con ese vehículo (salta festivos, vacaciones y días en blanco)
+    function getLastVehicleLogBeforeDate(plate, targetDate) {
+      if (!plate || !currentUser) return null;
+      const cleanPlate = plate.trim().toUpperCase();
+      return mileageLogs
+        .filter(l => 
+          l.usuarioEmail === currentUser.email &&
+          l.fecha && l.fecha < targetDate &&
+          l.matricula && l.matricula.trim().toUpperCase() === cleanPlate
+        )
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0] || null;
+    }
+
     function prefillMileageDefaults() {
       if (document.getElementById('km-edit-id').value) return;
 
@@ -922,12 +935,25 @@
         return;
       }
 
+      const currentDate = document.getElementById('km-date')?.value || new Date().toISOString().split('T')[0];
+      const currentPlate = document.getElementById('km-matricula')?.value.trim().toUpperCase();
+
+      // Si no hay matrícula escrita aún, tomar la última usada
       const last = userLogs[0];
+      if (!currentPlate && last.matricula) {
+        document.getElementById('km-matricula').value = last.matricula;
+      }
       if (last.gabineteCampo) document.getElementById('km-gab-campo').value = last.gabineteCampo;
       if (last.actividad) document.getElementById('km-actividad').value = last.actividad;
-      if (last.matricula) document.getElementById('km-matricula').value = last.matricula;
-      if (last.kmFin !== undefined && last.kmFin !== null && last.kmFin > 0) {
-        document.getElementById('km-inicio').value = last.kmFin;
+
+      const activePlate = document.getElementById('km-matricula').value.trim().toUpperCase();
+      const lastVehicleLog = getLastVehicleLogBeforeDate(activePlate, currentDate);
+
+      if (lastVehicleLog && lastVehicleLog.kmFin !== undefined && lastVehicleLog.kmFin !== null && lastVehicleLog.kmFin > 0) {
+        document.getElementById('km-inicio').value = lastVehicleLog.kmFin;
+      } else if (lastVehicleLog && lastVehicleLog.kmInicio !== undefined && lastVehicleLog.kmInicio !== null && lastVehicleLog.kmInicio > 0) {
+        // En caso de que el día anterior no tuviera kmFin, sugerimos su kmInicio
+        document.getElementById('km-inicio').value = lastVehicleLog.kmInicio;
       } else {
         document.getElementById('km-inicio').value = '';
       }
@@ -938,6 +964,24 @@
 
     window.handleKmDateChange = () => {
       autoFillRecintosForDate();
+      if (!document.getElementById('km-edit-id').value) {
+        handleKmPlateOrDateChange();
+      }
+    };
+
+    window.handleKmPlateOrDateChange = () => {
+      if (document.getElementById('km-edit-id').value) return;
+      const curDate = document.getElementById('km-date')?.value;
+      const plate = document.getElementById('km-matricula')?.value.trim().toUpperCase();
+      if (!plate || !curDate) return;
+
+      const lastVehLog = getLastVehicleLogBeforeDate(plate, curDate);
+      if (lastVehLog && lastVehLog.kmFin !== undefined && lastVehLog.kmFin !== null && lastVehLog.kmFin > 0) {
+        document.getElementById('km-inicio').value = lastVehLog.kmFin;
+      } else {
+        document.getElementById('km-inicio').value = '';
+      }
+      calcDailyKm();
     };
 
     function autoFillRecintosForDate() {
@@ -1024,17 +1068,18 @@
       }
 
       const kmTotales = (kmIni !== null && kmFin !== null && kmFin >= kmIni) ? (kmFin - kmIni) : 0;
-
       const isSplit = document.getElementById('km-toggle-split').checked;
       const curUserDoc = usersList.find(u => u.email === currentUser.email);
       const aliasName = curUserDoc?.alias || currentUser.email.split('@')[0];
+      const curPlate = document.getElementById('km-matricula').value.trim().toUpperCase() || '';
+      const curDate = document.getElementById('km-date').value;
 
       const payload = {
         centroCoste: "202-TT-0-086-26",
         usuarioEmail: currentUser.email,
         usuarioAlias: aliasName,
-        fecha: document.getElementById('km-date').value,
-        mes: document.getElementById('km-date').value.slice(0, 7),
+        fecha: curDate,
+        mes: curDate.slice(0, 7),
         gabineteCampo: document.getElementById('km-gab-campo').value,
         actividad: document.getElementById('km-actividad').value,
         rendimientoRecintos: parseInt(document.getElementById('km-rendimiento').value) || 0,
@@ -1044,7 +1089,7 @@
         horaEntrada2: isSplit ? (document.getElementById('km-hora-in-2').value || '') : '',
         horaSalida2: isSplit ? (document.getElementById('km-hora-out-2').value || '') : '',
         ruta: document.getElementById('km-ruta-full').value,
-        matricula: document.getElementById('km-matricula').value.trim().toUpperCase() || '',
+        matricula: curPlate,
         kmInicio: kmIni !== null ? kmIni : 0,
         kmFin: kmFin !== null ? kmFin : 0,
         kmTotales: kmTotales,
@@ -1058,14 +1103,33 @@
       try {
         if (editId) {
           await updateDoc(doc(db, "mileage_logs", editId), payload);
-          alert("Jornada actualizada correctamente.");
         } else {
           await addDoc(collection(db, "mileage_logs"), {
             ...payload,
             createdAt: new Date().toISOString()
           });
-          alert("Jornada guardada correctamente.");
         }
+
+        // =========================================================================
+        // RETROALIMENTACIÓN AUTOMÁTICA DE KM AL DÍA ANTERIOR (SALTANDO FESTIVOS/VACACIONES)
+        // Si el técnico ingresó kmInicio hoy y la última jornada de este mismo coche
+        // no tenía kmFin (o era 0), se completa automáticamente con el kmInicio de hoy.
+        // =========================================================================
+        if (curPlate && kmIni !== null && kmIni > 0) {
+          const prevLog = getLastVehicleLogBeforeDate(curPlate, curDate);
+          if (prevLog && (!prevLog.kmFin || prevLog.kmFin === 0)) {
+            const prevIni = prevLog.kmInicio || 0;
+            const updatedTotales = (kmIni >= prevIni) ? (kmIni - prevIni) : 0;
+            await updateDoc(doc(db, "mileage_logs", prevLog.id), {
+              kmFin: kmIni,
+              kmTotales: updatedTotales,
+              updatedAt: new Date().toISOString()
+            });
+            console.log(`Km fin de la jornada anterior (${prevLog.fecha}) autocompletados con ${kmIni} Km.`);
+          }
+        }
+
+        alert(editId ? "Jornada actualizada correctamente." : "Jornada guardada correctamente.");
         cancelKmEdit();
       } catch (err) {
         alert("❌ Error: " + err.message);
@@ -1306,7 +1370,6 @@
       const monthAbr = MESES_ABR[monthIdx] || '';
       const yearShort = yearStr.slice(-2);
 
-      // Filtrar jornadas de este vehículo en el mes
       const vehicleLogs = mileageLogs.filter(l => 
         l.usuarioEmail === currentUser.email && 
         l.fecha && l.fecha.startsWith(selectedMonth) &&
@@ -1317,7 +1380,6 @@
       const userAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
 
       try {
-        // Intentar cargar la plantilla (admite 'Seguimiento Vehiculo.xlsx' o 'Seguimiento_Vehiculo.xlsx')
         let response = await fetch('./Seguimiento Vehiculo.xlsx');
         if (!response.ok) {
           response = await fetch('./Seguimiento_Vehiculo.xlsx');
@@ -1332,47 +1394,41 @@
 
         const worksheet = workbook.getWorksheet(1);
 
-        // 1. RELLENAR CABECERA
-        worksheet.getCell('D2').value = selectedPlate;   // Celda D2: Matrícula
-        worksheet.getCell('I2').value = year;            // Celda I2: Año
-        worksheet.getCell('J2').value = monthNameUpper;  // Celda J2: Mes
+        // Cabecera
+        worksheet.getCell('D2').value = selectedPlate;
+        worksheet.getCell('I2').value = year;
+        worksheet.getCell('J2').value = monthNameUpper;
 
-        // 2. RELLENAR DÍAS 1 AL 31 (Filas 5 a 35)
+        // Días 1 al 31 (Filas 5 a 35)
         for (let dia = 1; dia <= 31; dia++) {
-          const rowNum = 4 + dia; // Día 1 = Fila 5
+          const rowNum = 4 + dia;
           const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
           const dateStr = `${selectedMonth}-${diaPadded}`;
 
           const log = vehicleLogs.find(l => l.fecha === dateStr);
 
+          // Limpiar celda de Total Km por si venía con fórmula residual
+          const cellTotalKm = worksheet.getCell(`G${rowNum}`);
+          cellTotalKm.value = null;
+
           if (log) {
-            // Columna B: Conductor
             worksheet.getCell(`B${rowNum}`).value = userAlias;
-
-            // Columna C: Motivo del desplazamiento
             worksheet.getCell(`C${rowNum}`).value = log.ruta || "";
-
-            // Columna E: Km Inicio
             worksheet.getCell(`E${rowNum}`).value = (log.kmInicio !== undefined && log.kmInicio !== null && log.kmInicio > 0) ? Number(log.kmInicio) : "";
-
-            // Columna F: Km Final
             worksheet.getCell(`F${rowNum}`).value = (log.kmFin !== undefined && log.kmFin !== null && log.kmFin > 0) ? Number(log.kmFin) : "";
 
-            // Columna G: Total Km
             const kmIniNum = (log.kmInicio !== undefined && log.kmInicio !== null) ? Number(log.kmInicio) : null;
             const kmFinNum = (log.kmFin !== undefined && log.kmFin !== null) ? Number(log.kmFin) : null;
             const kmTot = (kmIniNum !== null && kmFinNum !== null && kmFinNum >= kmIniNum) ? (kmFinNum - kmIniNum) : 0;
-            worksheet.getCell(`G${rowNum}`).value = kmTot;
+            cellTotalKm.value = kmTot;
 
-            // Columna H: Combustible - Litros
             worksheet.getCell(`H${rowNum}`).value = log.repostajeLitros ? Number(log.repostajeLitros) : "";
-
-            // Columna I: Combustible - Importe (€)
             worksheet.getCell(`I${rowNum}`).value = log.repostajeImporte ? Number(log.repostajeImporte) : "";
+          } else {
+            cellTotalKm.value = "";
           }
         }
 
-        // 3. GENERAR Y DESCARGAR
         const buffer = await workbook.xlsx.writeBuffer();
         const safePlate = selectedPlate.replace(/[^a-zA-Z0-9]/g, '');
         const fileName = `Seguimiento_Vehiculo_${safePlate}_${monthAbr}_${yearShort}.xlsx`;
