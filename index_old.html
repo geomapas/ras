@@ -385,19 +385,21 @@
 
       <!-- SUB-PESTAÑA 3: DESCARGAS DE DOCUMENTACIÓN / PARTES -->
       <div id="tech-subtab-down" class="hidden max-w-xl mx-auto space-y-4">
+        
+        <!-- TARJETA 1: Seguimiento Mensual de Actividades (Geacam) -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
               <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
                 <i data-lucide="file-spreadsheet" class="w-5 h-5 text-[#2e371f]"></i> Seguimiento Mensual de Actividades
               </h3>
-              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Control de vehículos, actividades y costes (GEACAM)</p>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Control de técnicos, actividades y costes (GEACAM)</p>
             </div>
-            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Excel Oficial</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Actividades</span>
           </div>
 
           <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
-            Genera y descarga la plantilla cumplimentada automáticamente con todas las jornadas, rutas, recintos y gastos registrados en el mes seleccionado.
+            Genera y descarga la plantilla de actividades cumplimentada con todas las jornadas, rutas, recintos y gastos registrados en el mes seleccionado.
           </p>
 
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
@@ -407,10 +409,47 @@
             </div>
 
             <button type="button" onclick="exportMonthlyReportExcel()" class="w-full py-3 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
-              <i data-lucide="download" class="w-4 h-4"></i> Descargar Parte Cumplimentado (.xlsx)
+              <i data-lucide="download" class="w-4 h-4"></i> Descargar Parte de Actividades (.xlsx)
             </button>
           </div>
         </div>
+
+        <!-- TARJETA 2: Seguimiento del Vehículo (PE-SGI-04) -->
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="truck" class="w-5 h-5 text-[#2e371f]"></i> Seguimiento del Vehículo
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Procedimiento PE-SGI-04 FO-PE-SGI-04-03</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Vehículos</span>
+          </div>
+
+          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
+            Genera el parte de control individual por cada vehículo utilizado. Filtra por mes y selecciona la matrícula para exportar su hoja mensual.
+          </p>
+
+          <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div>
+                <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Mes y Año:</label>
+                <input type="month" id="vehicle-export-month" onchange="updateVehiclePlatesOptions()" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+              </div>
+              <div>
+                <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Matrícula Usada:</label>
+                <select id="vehicle-export-plate" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                  <option value="">-- Elige mes primero --</option>
+                </select>
+              </div>
+            </div>
+
+            <button type="button" onclick="exportVehicleReportExcel()" class="w-full py-3 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+              <i data-lucide="download" class="w-4 h-4"></i> Descargar Seguimiento Vehículo (.xlsx)
+            </button>
+          </div>
+        </div>
+
       </div>
     </section>
 
@@ -689,6 +728,7 @@
       document.getElementById('km-date').value = today;
       document.getElementById('km-filter-month').value = curMonth;
       document.getElementById('excel-export-month').value = curMonth;
+      document.getElementById('vehicle-export-month').value = curMonth;
 
       registerSW();
     });
@@ -769,7 +809,6 @@
     window.handleLogout = () => signOut(auth);
 
     function listenToFirestoreData() {
-      // Escuchar Usuarios
       onSnapshot(collection(db, "users"), (snapshot) => {
         usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const curU = usersList.find(u => u.email === currentUser?.email);
@@ -779,7 +818,6 @@
         renderUsersTable();
       });
 
-      // Escuchar OTs
       onSnapshot(collection(db, "work_orders"), (snapshot) => {
         workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         if (userRole === 'tecnico' || !document.getElementById('sec-tecnico').classList.contains('hidden')) {
@@ -793,7 +831,6 @@
         autoFillRecintosForDate();
       });
 
-      // Escuchar Campañas
       onSnapshot(collection(db, "campaigns"), (snapshot) => {
         campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         const sel = document.getElementById('ot-camp-sel');
@@ -801,11 +838,11 @@
         if (userRole === 'gestor') renderCampTable();
       });
 
-      // Escuchar Kilometraje
       onSnapshot(collection(db, "mileage_logs"), (snapshot) => {
         mileageLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderMileageLogs();
         prefillMileageDefaults();
+        updateVehiclePlatesOptions();
       });
     }
 
@@ -863,6 +900,8 @@
       } else if (subtab === 'km') {
         renderMileageLogs();
         prefillMileageDefaults();
+      } else if (subtab === 'down') {
+        updateVehiclePlatesOptions();
       }
     };
 
@@ -1125,7 +1164,28 @@
       lucide.createIcons();
     }
 
-    // --- FUNCIÓN DE EXPORTACIÓN Y RELLENADO DE LA PLANTILLA EXCEL ---
+    // --- FUNCIÓN: ACTUALIZAR SELECTOR DE MATRÍCULAS USADAS EN EL MES ---
+    window.updateVehiclePlatesOptions = () => {
+      const selectedMonth = document.getElementById('vehicle-export-month')?.value;
+      const plateSelect = document.getElementById('vehicle-export-plate');
+      if (!plateSelect || !currentUser) return;
+
+      const userLogs = mileageLogs.filter(l => 
+        l.usuarioEmail === currentUser.email && 
+        l.fecha && (!selectedMonth || l.fecha.startsWith(selectedMonth)) &&
+        l.matricula && l.matricula.trim() !== ''
+      );
+
+      const uniquePlates = [...new Set(userLogs.map(l => l.matricula.trim().toUpperCase()))].sort();
+
+      if (!uniquePlates.length) {
+        plateSelect.innerHTML = '<option value="">-- Sin matrículas en este mes --</option>';
+      } else {
+        plateSelect.innerHTML = uniquePlates.map(p => `<option value="${p}">${p}</option>`).join('');
+      }
+    };
+
+    // --- FUNCIÓN 1: EXPORTACIÓN PARTE DE ACTIVIDADES ---
     window.exportMonthlyReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1165,14 +1225,14 @@
 
         const worksheet = workbook.getWorksheet(1);
 
-        // 1. Cabecera
+        // Cabecera
         worksheet.getCell('M6').value = year;
         worksheet.getCell('O6').value = monthNameUpper;
         worksheet.getCell('D8').value = userAlias;
 
         const centroCosteM9 = worksheet.getCell('M9').value || "202-TT-0-086-26";
 
-        // 2. Días 1 al 31 (Filas 14 a 44)
+        // Días 1 al 31 (Filas 14 a 44)
         for (let dia = 1; dia <= 31; dia++) {
           const rowNum = 13 + dia;
           const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
@@ -1217,6 +1277,110 @@
 
       } catch (err) {
         alert("❌ Error: " + err.message);
+      }
+    };
+
+    // --- FUNCIÓN 2: EXPORTACIÓN SEGUIMIENTO DE VEHÍCULO (PE-SGI-04) ---
+    window.exportVehicleReportExcel = async () => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para descargar el parte.");
+        return;
+      }
+
+      const selectedMonth = document.getElementById('vehicle-export-month')?.value;
+      const selectedPlate = document.getElementById('vehicle-export-plate')?.value;
+
+      if (!selectedMonth) {
+        alert("Por favor, selecciona un mes y año para exportar.");
+        return;
+      }
+      if (!selectedPlate) {
+        alert("No se ha seleccionado ninguna matrícula o no hay jornadas con vehículo registradas en este mes.");
+        return;
+      }
+
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      const year = parseInt(yearStr);
+      const monthIdx = parseInt(monthStr) - 1;
+      const monthNameUpper = MESES_TEXTO[monthIdx] || '';
+      const monthAbr = MESES_ABR[monthIdx] || '';
+      const yearShort = yearStr.slice(-2);
+
+      // Filtrar jornadas de este vehículo en el mes
+      const vehicleLogs = mileageLogs.filter(l => 
+        l.usuarioEmail === currentUser.email && 
+        l.fecha && l.fecha.startsWith(selectedMonth) &&
+        l.matricula && l.matricula.trim().toUpperCase() === selectedPlate.toUpperCase()
+      );
+
+      const curUserDoc = usersList.find(u => u.email === currentUser.email);
+      const userAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
+
+      try {
+        // Intentar cargar la plantilla (admite 'Seguimiento Vehiculo.xlsx' o 'Seguimiento_Vehiculo.xlsx')
+        let response = await fetch('./Seguimiento Vehiculo.xlsx');
+        if (!response.ok) {
+          response = await fetch('./Seguimiento_Vehiculo.xlsx');
+        }
+        if (!response.ok) {
+          throw new Error("No se pudo cargar 'Seguimiento Vehiculo.xlsx'. Asegúrate de que el archivo esté subido en la raíz de tu repositorio.");
+        }
+
+        const arrayBuffer = await response.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        const worksheet = workbook.getWorksheet(1);
+
+        // 1. RELLENAR CABECERA
+        worksheet.getCell('D2').value = selectedPlate;   // Celda D2: Matrícula
+        worksheet.getCell('I2').value = year;            // Celda I2: Año
+        worksheet.getCell('J2').value = monthNameUpper;  // Celda J2: Mes
+
+        // 2. RELLENAR DÍAS 1 AL 31 (Filas 5 a 35)
+        for (let dia = 1; dia <= 31; dia++) {
+          const rowNum = 4 + dia; // Día 1 = Fila 5
+          const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
+          const dateStr = `${selectedMonth}-${diaPadded}`;
+
+          const log = vehicleLogs.find(l => l.fecha === dateStr);
+
+          if (log) {
+            // Columna B: Conductor
+            worksheet.getCell(`B${rowNum}`).value = userAlias;
+
+            // Columna C: Motivo del desplazamiento
+            worksheet.getCell(`C${rowNum}`).value = log.ruta || "";
+
+            // Columna E: Km Inicio
+            worksheet.getCell(`E${rowNum}`).value = (log.kmInicio !== undefined && log.kmInicio !== null && log.kmInicio > 0) ? Number(log.kmInicio) : "";
+
+            // Columna F: Km Final
+            worksheet.getCell(`F${rowNum}`).value = (log.kmFin !== undefined && log.kmFin !== null && log.kmFin > 0) ? Number(log.kmFin) : "";
+
+            // Columna G: Total Km
+            const kmIniNum = (log.kmInicio !== undefined && log.kmInicio !== null) ? Number(log.kmInicio) : null;
+            const kmFinNum = (log.kmFin !== undefined && log.kmFin !== null) ? Number(log.kmFin) : null;
+            const kmTot = (kmIniNum !== null && kmFinNum !== null && kmFinNum >= kmIniNum) ? (kmFinNum - kmIniNum) : 0;
+            worksheet.getCell(`G${rowNum}`).value = kmTot;
+
+            // Columna H: Combustible - Litros
+            worksheet.getCell(`H${rowNum}`).value = log.repostajeLitros ? Number(log.repostajeLitros) : "";
+
+            // Columna I: Combustible - Importe (€)
+            worksheet.getCell(`I${rowNum}`).value = log.repostajeImporte ? Number(log.repostajeImporte) : "";
+          }
+        }
+
+        // 3. GENERAR Y DESCARGAR
+        const buffer = await workbook.xlsx.writeBuffer();
+        const safePlate = selectedPlate.replace(/[^a-zA-Z0-9]/g, '');
+        const fileName = `Seguimiento_Vehiculo_${safePlate}_${monthAbr}_${yearShort}.xlsx`;
+        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+        saveAs(blob, fileName);
+
+      } catch (err) {
+        alert("❌ Error al exportar seguimiento de vehículo: " + err.message);
       }
     };
 
