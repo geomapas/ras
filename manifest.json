@@ -1,19 +1,23 @@
 {
+  "id": "/ras/",
   "short_name": "RAS",
   "name": "RAS - Control de Campo y Ordenes de Trabajo",
   "icons": [
     {
       "src": "./icon-192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "./icon-512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
-  "start_url": "./index.html",
+  "start_url": "/ras/",
+  "scope": "/ras/",
   "background_color": "#89986D",
   "theme_color": "#89986D",
   "display": "standalone",
