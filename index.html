@@ -17,7 +17,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Librerías para exportar a Excel -->
+  <!-- Librerías para exportar/importar Excel -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   
@@ -121,11 +121,9 @@
 
       <!-- SUB-PESTAÑA 1: CONTROL DE OTS -->
       <div id="tech-subtab-ots" class="max-w-xl mx-auto space-y-4">
-        
-        <!-- Tarjeta Selector OT y Botón de Añadir (Sin buscador) -->
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-2.5">
           <div class="flex items-center justify-between">
-            <label class="block text-[11px] font-black text-[#222a16] uppercase">Orden de Trabajo (OT)</label>
+            <label class="block text-[11px] font-black text-[#222a16] uppercase">Mis Órdenes de Trabajo (OT)</label>
             <button type="button" onclick="openAddOTModal()" class="px-2.5 py-1 bg-white text-[#2e371f] hover:bg-slate-100 rounded-lg text-xs font-black shadow flex items-center gap-1 transition">
               <i data-lucide="plus" class="w-3.5 h-3.5 text-[#728157]"></i> Añadir Nueva OT
             </button>
@@ -162,10 +160,10 @@
             </div>
           </div>
 
-          <!-- Formulario Registro OT -->
+          <!-- Formulario Registro OT (Modificado: Ahora pide Recintos Visitados Hoy) -->
           <form id="form-daily" class="bg-white/90 p-3.5 rounded-xl shadow space-y-3">
             <h4 class="font-black text-[10px] text-[#283219] uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#728157]"></i> Registro de Visita OT
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#728157]"></i> Registro de Visita de Jornada
             </h4>
             <div class="grid grid-cols-2 gap-2">
               <div>
@@ -173,8 +171,8 @@
                 <input type="date" id="reg-date" required class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
               </div>
               <div>
-                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Pendientes Restantes</label>
-                <input type="number" id="reg-pending" min="0" required placeholder="0 si finaliza" class="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white text-right shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
+                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Recintos Visitados Hoy</label>
+                <input type="number" id="reg-visited" min="1" required placeholder="Ej: 8" class="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white text-right shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
               </div>
             </div>
             <button type="submit" class="w-full py-2 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">
@@ -204,7 +202,6 @@
           <form id="form-mileage" class="space-y-3.5">
             <input type="hidden" id="km-edit-id" value="">
 
-            <!-- BLOQUE: JORNADA Y ACTIVIDAD -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2.5">
               <div class="grid grid-cols-2 gap-2">
                 <div>
@@ -223,9 +220,10 @@
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-0.5">Actividad</label>
-                  <select id="km-actividad" required class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                  <select id="km-actividad" required onchange="handleActivityChange()" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
                     <option value="CST-AY">CST-AY</option>
                     <option value="CST-CNR">CST-CNR</option>
+                    <option value="CST-ALE">CST-ALE</option>
                     <option value="CST-VEA">CST-VEA</option>
                     <option value="CST-VEG">CST-VEG</option>
                     <option value="CST RE/TR">CST RE/TR</option>
@@ -234,15 +232,14 @@
                 </div>
                 <div>
                   <div class="flex justify-between items-center mb-0.5">
-                    <label class="block text-[10px] font-black text-[#2e391f] uppercase">Recintos OT</label>
-                    <span class="text-[9px] bg-main-primary text-white font-black px-1.5 py-0.2 rounded shadow-xs">Auto</span>
+                    <label id="km-rendimiento-label" class="block text-[10px] font-black text-[#2e391f] uppercase">Recintos OT</label>
+                    <span id="km-rendimiento-badge" class="text-[9px] bg-main-primary text-white font-black px-1.5 py-0.2 rounded shadow-xs">Auto</span>
                   </div>
                   <input type="number" id="km-rendimiento" min="0" value="0" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black text-slate-800 text-right outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
                 </div>
               </div>
             </div>
 
-            <!-- BLOQUE: HORARIOS -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
               <div class="flex justify-between items-center">
                 <span class="text-[10px] font-black text-[#2e391f] uppercase flex items-center gap-1">
@@ -277,7 +274,6 @@
               </div>
             </div>
 
-            <!-- BLOQUE: RUTA -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-1.5">
               <div class="flex justify-between items-center">
                 <label class="text-[10px] font-black text-[#2e391f] uppercase flex items-center gap-1">
@@ -294,7 +290,6 @@
               <input type="hidden" id="km-ruta-full" value="">
             </div>
 
-            <!-- BLOQUE: VEHÍCULO Y KM -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
               <div class="grid grid-cols-3 gap-2 items-end">
                 <div>
@@ -317,7 +312,6 @@
               </div>
             </div>
 
-            <!-- BLOQUE: GASTOS Y DIETAS -->
             <div class="bg-white/80 rounded-xl overflow-hidden shadow-sm">
               <button type="button" onclick="toggleSecondaryExpenses()" class="w-full p-2.5 text-left text-xs font-black text-[#2b351d] flex justify-between items-center transition hover:bg-white/90">
                 <span class="flex items-center gap-1.5 text-[11px]">
@@ -375,7 +369,7 @@
                   <th class="p-2.5">Fecha</th>
                   <th class="p-2.5">Tipo / Act.</th>
                   <th class="p-2.5">Ruta</th>
-                  <th class="p-2.5 text-right">Recintos</th>
+                  <th class="p-2.5 text-right">Recintos / Exp.</th>
                   <th class="p-2.5 text-right">Km</th>
                   <th class="p-2.5 text-right">Gastos</th>
                   <th class="p-2.5 text-center">Acciones</th>
@@ -389,8 +383,7 @@
 
       <!-- SUB-PESTAÑA 3: DESCARGAS DE DOCUMENTACIÓN / PARTES -->
       <div id="tech-subtab-down" class="hidden max-w-xl mx-auto space-y-4">
-        
-        <!-- TARJETA 1 (PRIORITARIA): Rendimiento de Actividades Semanal (RAS Acumulativo) -->
+        <!-- TARJETA 1: RAS Acumulativo -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5 border-2 border-white/60">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
@@ -402,34 +395,28 @@
             <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Acumulativo</span>
           </div>
 
-          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
-            Genera tu parte semanal con todas las semanas y visitas que llevas acumuladas hasta la fecha. Selecciona el modelo correspondiente a la campaña en la que estás trabajando:
-          </p>
-
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2.5">
-            <!-- Botón RAS CNR -->
             <button type="button" onclick="exportCumulativeRAS('CNR')" class="w-full py-3 px-3.5 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-between">
               <span class="flex items-center gap-2">
                 <i data-lucide="download" class="w-4 h-4"></i> Descargar RAS Campaña CNR (.xlsx)
               </span>
-              <span id="badge-ras-cnr" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-white/20 text-white flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Comprobando...
+              <span id="badge-ras-cnr" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
               </span>
             </button>
 
-            <!-- Botón RAS RQNM -->
             <button type="button" onclick="exportCumulativeRAS('RQNM')" class="w-full py-3 px-3.5 bg-[#526338] hover:bg-[#43522f] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-between">
               <span class="flex items-center gap-2">
                 <i data-lucide="download" class="w-4 h-4"></i> Descargar RAS Campaña RQNM (.xlsx)
               </span>
-              <span id="badge-ras-rqnm" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-white/20 text-white flex items-center gap-1">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span> Comprobando...
+              <span id="badge-ras-rqnm" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
               </span>
             </button>
           </div>
         </div>
 
-        <!-- TARJETA 2: Seguimiento Mensual de Actividades (Geacam) -->
+        <!-- TARJETA 2: Seguimiento Mensual de Actividades -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
@@ -440,10 +427,6 @@
             </div>
             <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Mensual</span>
           </div>
-
-          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
-            Genera y descarga la plantilla de actividades mensual cumplimentada con todas las jornadas, rutas, recintos y gastos registrados en el mes seleccionado.
-          </p>
 
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
             <div>
@@ -457,7 +440,7 @@
           </div>
         </div>
 
-        <!-- TARJETA 3: Seguimiento del Vehículo (PE-SGI-04) -->
+        <!-- TARJETA 3: Seguimiento del Vehículo -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
@@ -468,10 +451,6 @@
             </div>
             <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Vehículos</span>
           </div>
-
-          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
-            Genera el parte de control individual por cada vehículo utilizado. Filtra por mes y selecciona la matrícula para exportar su hoja mensual.
-          </p>
 
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -492,7 +471,6 @@
             </button>
           </div>
         </div>
-
       </div>
     </section>
 
@@ -500,6 +478,9 @@
     <section id="sec-gestor" class="hidden space-y-4">
       <div class="flex border-b border-slate-300 gap-1 overflow-x-auto text-xs pb-1">
         <button id="tab-btn-ots" onclick="switchGestorSubTab('ots')" class="px-3 py-2 font-bold border-b-2 border-main-primary text-[#242c17] whitespace-nowrap">OTs</button>
+        <button id="tab-btn-import" onclick="switchGestorSubTab('import')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17] flex items-center gap-1">
+          <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Importar RAS
+        </button>
         <button id="tab-btn-plan" onclick="switchGestorSubTab('plan')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Planificaciones</button>
         <button id="tab-btn-users" onclick="switchGestorSubTab('users')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Usuarios</button>
         <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Estadísticas</button>
@@ -509,7 +490,7 @@
       <div id="subtab-ots" class="space-y-4">
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
           <div class="flex justify-between items-center gap-2 border-b border-black/10 pb-2">
-            <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Listado OTs</h3>
+            <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Listado OTs Regionales</h3>
             <input type="text" id="filter-ot-table" oninput="renderOTTable()" placeholder="Buscar OT..." class="p-1.5 border-0 rounded-lg text-xs bg-white text-slate-800 w-44 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
           </div>
           <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
@@ -528,6 +509,40 @@
               <tbody id="ot-table-body" class="divide-y divide-slate-100"></tbody>
             </table>
           </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA: IMPORTADOR RAS -->
+      <div id="subtab-import" class="hidden space-y-4 max-w-xl mx-auto">
+        <div class="bg-card-filled p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div>
+            <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+              <i data-lucide="file-up" class="w-5 h-5 text-[#2e371f]"></i> Importar Archivo RAS Existente (.xlsx)
+            </h3>
+            <p class="text-[11px] text-[#2c371b] font-bold mt-1">
+              Sube el archivo Excel oficial completado por un técnico. Se registrarán automáticamente las OTs y todo su histórico semanal acumulado.
+            </p>
+          </div>
+
+          <div class="bg-white/80 p-4 rounded-xl shadow-sm space-y-3">
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Archivo Excel RAS (.xlsx):</label>
+              <input type="file" id="ras-import-file" accept=".xlsx" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800">
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Asignar al Técnico (Opcional si coincide el nombre en D4):</label>
+              <select id="ras-import-tech-override" class="w-full p-2 border-0 rounded-lg text-xs bg-white text-slate-800 shadow-sm font-bold">
+                <option value="">-- Detectar automáticamente por el nombre de celda D4 --</option>
+              </select>
+            </div>
+
+            <button type="button" onclick="processRASImportFile()" class="w-full py-3 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> Cargar Datos del Excel a la App
+            </button>
+          </div>
+
+          <div id="ras-import-status" class="hidden text-xs bg-white p-3 rounded-xl shadow font-semibold"></div>
         </div>
       </div>
 
@@ -769,6 +784,7 @@
       document.getElementById('excel-export-month').value = curMonth;
       document.getElementById('vehicle-export-month').value = curMonth;
 
+      handleActivityChange();
       registerSW();
     });
 
@@ -859,15 +875,26 @@
 
       onSnapshot(collection(db, "work_orders"), (snapshot) => {
         workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (userRole === 'tecnico' || !document.getElementById('sec-tecnico').classList.contains('hidden')) {
-          renderOTSelect();
-        }
+        
+        // Vista técnico siempre actualizada
+        renderOTSelect();
+
         if (userRole === 'gestor') {
           renderOTTable();
           renderGestorReports();
         }
-        if (currentOT) selectOT(currentOT.id);
-        autoFillRecintosForDate();
+        
+        if (currentOT) {
+          // Si la OT actual sigue perteneciendo al usuario, refrescarla
+          const refreshed = workOrders.find(o => o.id === currentOT.id && o.tecnicoId === currentUser.email);
+          if (refreshed) {
+            selectOT(refreshed.id);
+          } else {
+            selectOT('');
+          }
+        }
+
+        handleActivityChange();
         updateRASBadges();
       });
 
@@ -892,8 +919,10 @@
 
     function populateTechSelects() {
       const editTechSelect = document.getElementById('edit-ot-tech');
+      const importTechSelect = document.getElementById('ras-import-tech-override');
       const options = usersList.map(u => `<option value="${u.email}">${u.alias ? u.alias + ' - ' + u.email : u.email}</option>`).join('');
       if (editTechSelect) editTechSelect.innerHTML = options;
+      if (importTechSelect) importTechSelect.innerHTML = '<option value="">-- Detectar automáticamente por celda D4 --</option>' + options;
     }
 
     window.switchRoleView = (role) => {
@@ -942,7 +971,39 @@
       }
     };
 
-    // --- LÓGICA DE PARSEO Y CREACIÓN RÁPIDA DE OTs ---
+    // --- LÓGICA DE ACTIVIDAD Y ETIQUETAS DINÁMICAS ---
+    window.handleActivityChange = () => {
+      const act = document.getElementById('km-actividad')?.value || 'CST-AY';
+      const label = document.getElementById('km-rendimiento-label');
+      const badge = document.getElementById('km-rendimiento-badge');
+      const rendInput = document.getElementById('km-rendimiento');
+
+      if (!label || !badge || !rendInput) return;
+
+      if (act === 'CST-AY' || act === 'CST-CNR' || act === 'CST-ALE') {
+        label.innerText = 'RECINTOS OT';
+        badge.classList.remove('hidden');
+        badge.innerText = 'Auto';
+        autoFillRecintosForDate();
+      } else if (act === 'CST-VEA' || act === 'CST-VEG') {
+        label.innerText = 'EXPLOTACIONES';
+        badge.classList.add('hidden');
+        if (!document.getElementById('km-edit-id').value) {
+          rendInput.value = '0';
+        }
+      } else if (act === 'CST RE/TR') {
+        label.innerText = 'RECINTOS';
+        badge.classList.add('hidden');
+        if (!document.getElementById('km-edit-id').value) {
+          rendInput.value = '0';
+        }
+      } else {
+        label.innerText = 'CANTIDAD';
+        badge.classList.add('hidden');
+      }
+    };
+
+    // --- LÓGICA DE PARSEO Y CREACIÓN DE OTs ---
     window.openAddOTModal = () => {
       document.getElementById('tech-ot-code-input').value = '';
       document.getElementById('tech-ot-error').classList.add('hidden');
@@ -964,7 +1025,7 @@
       }
 
       const camp = parts[1].toUpperCase();
-      if (!['CNR', 'AY', 'ALE'].includes(camp)) {
+      if (!['CNR', 'AY', 'ALE', 'RQNM'].includes(camp)) {
         return { error: `Campaña '${camp}' no reconocida. Debe ser CNR, AY o ALE.` };
       }
 
@@ -1034,6 +1095,179 @@
       }
     });
 
+    // --- FUNCIÓN DEL IMPORTADOR RAS (.XLSX) ---
+    window.processRASImportFile = async () => {
+      const fileInput = document.getElementById('ras-import-file');
+      const statusDiv = document.getElementById('ras-import-status');
+      const overrideEmail = document.getElementById('ras-import-tech-override').value;
+
+      if (!fileInput.files || !fileInput.files[0]) {
+        alert("Por favor, selecciona primero el archivo .xlsx de RAS.");
+        return;
+      }
+
+      statusDiv.classList.remove('hidden', 'text-red-700', 'text-emerald-700');
+      statusDiv.className = "text-xs bg-white p-3 rounded-xl shadow font-semibold text-slate-700 block";
+      statusDiv.innerText = "Leyendo y procesando el archivo...";
+
+      try {
+        const file = fileInput.files[0];
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        // 1. Obtención de hoja segura sin depender de id: 1
+        let worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
+
+        if (!worksheet) {
+          worksheet = workbook.getWorksheet('CNR') || 
+                      workbook.getWorksheet('RQNM') || 
+                      workbook.getWorksheet('RAS') || 
+                      workbook.getWorksheet('Hoja1');
+        }
+
+        if (!worksheet) {
+          throw new Error("No se encontró ninguna pestaña con datos en el archivo subido.");
+        }
+
+        // 2. Extraer nombre del técnico (celda D4) y resolver asignación de forma estricta
+        const cellD4 = worksheet.getCell('D4').value;
+        const aliasInExcel = (cellD4 ? String(cellD4) : '').trim();
+
+        let assignedEmail = overrideEmail;
+        if (!assignedEmail && aliasInExcel) {
+          const found = usersList.find(u => 
+            (u.alias && u.alias.toLowerCase().trim() === aliasInExcel.toLowerCase().trim()) ||
+            (u.email && u.email.toLowerCase().includes(aliasInExcel.toLowerCase()))
+          );
+          if (found) assignedEmail = found.email;
+        }
+
+        // Si no se pudo asociar por celda D4 ni por selector manual, advertir al gestor
+        if (!assignedEmail) {
+          throw new Error("No se pudo detectar el técnico por la celda D4 ('" + aliasInExcel + "'). Por favor, selecciona el técnico explícitamente en el desplegable de asignación antes de importar.");
+        }
+
+        let importedOTCount = 0;
+        let importedVisitsCount = 0;
+
+        // 3. Iterar filas desde la 8 hasta la última disponible
+        const totalRows = worksheet.rowCount;
+
+        for (let rowNum = 8; rowNum <= totalRows; rowNum++) {
+          const row = worksheet.getRow(rowNum);
+          const otCodeRaw = row.getCell('C').value;
+          if (!otCodeRaw) continue;
+
+          const otCode = String(otCodeRaw).trim();
+          if (!otCode.toUpperCase().startsWith('OT_')) continue;
+
+          // Semanas en B (ej: "02/03 - 06/03" o "2/3-6/3")
+          const semanaStr = row.getCell('B').value ? String(row.getCell('B').value).trim() : '';
+          let mondayDate = null;
+
+          if (semanaStr && semanaStr.includes('/')) {
+            const firstPart = semanaStr.split('-')[0].trim();
+            const [dStr, mStr] = firstPart.split('/');
+            const diaNum = parseInt(dStr);
+            const mesNum = parseInt(mStr);
+            if (!isNaN(diaNum) && !isNaN(mesNum)) {
+              const diaPad = diaNum < 10 ? `0${diaNum}` : `${diaNum}`;
+              const mesPad = mesNum < 10 ? `0${mesNum}` : `${mesNum}`;
+              mondayDate = new Date(`2026-${mesPad}-${diaPad}T12:00:00`);
+            }
+          }
+
+          // Días de lunes a sábado en G, H, I, J, K, L
+          const colKeys = ['G', 'H', 'I', 'J', 'K', 'L'];
+          const dailyYields = [];
+
+          colKeys.forEach((col, dayIndex) => {
+            const cellVal = row.getCell(col).value;
+            const recintos = cellVal ? parseInt(cellVal) : 0;
+            if (!isNaN(recintos) && recintos > 0 && mondayDate) {
+              const visitDate = new Date(mondayDate);
+              visitDate.setDate(mondayDate.getDate() + dayIndex);
+              const dateStr = visitDate.toISOString().split('T')[0];
+              dailyYields.push({
+                fecha: dateStr,
+                recintosHoy: recintos
+              });
+            }
+          });
+
+          // Localizar o crear la OT
+          let existingOT = workOrders.find(o => o.nombre.toUpperCase() === otCode.toUpperCase());
+          let otDocId = existingOT ? existingOT.id : null;
+          let currentHist = existingOT ? [...(existingOT.historialDiario || [])] : [];
+          let otTotales = existingOT ? existingOT.recintosTotales : (parseInt(row.getCell('D').value) || 0);
+
+          if (!existingOT) {
+            const parsed = parseAndValidateOT(otCode);
+            const provName = parsed.provincia || 'Ciudad Real';
+            const provCode = parsed.provinciaCode || 'CR';
+            const campId = parsed.campania || 'CNR';
+            otTotales = otTotales || parsed.recintosTotales || 0;
+
+            const newDoc = await addDoc(collection(db, "work_orders"), {
+              nombre: otCode,
+              campaniaId: campId,
+              provincia: provName,
+              provinciaCode: provCode,
+              tecnicoId: assignedEmail,
+              recintosTotales: otTotales,
+              recintosRestantes: otTotales,
+              estado: 'en_progreso',
+              historialDiario: [],
+              createdAt: new Date().toISOString()
+            });
+
+            otDocId = newDoc.id;
+            importedOTCount++;
+          }
+
+          // Fusionar las visitas encontradas en esta fila
+          dailyYields.forEach(dy => {
+            const existsVisit = currentHist.some(h => h.fecha === dy.fecha);
+            if (!existsVisit) {
+              currentHist.push({
+                fecha: dy.fecha,
+                recintosHoy: dy.recintosHoy,
+                recintosPendientes: 0
+              });
+              importedVisitsCount++;
+            }
+          });
+
+          // Recalcular cronológicamente los pendientes
+          currentHist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+          let runningPending = otTotales;
+          currentHist.forEach(item => {
+            runningPending = Math.max(0, runningPending - (item.recintosHoy || 0));
+            item.recintosPendientes = runningPending;
+          });
+
+          // Guardar ordenado cronológicamente inverso para visualización UI
+          currentHist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+          const finalPending = currentHist.length > 0 ? currentHist[0].recintosPendientes : otTotales;
+
+          await updateDoc(doc(db, "work_orders", otDocId), {
+            historialDiario: currentHist,
+            recintosRestantes: finalPending,
+            estado: finalPending === 0 ? 'completada' : 'en_progreso'
+          });
+        }
+
+        statusDiv.className = "text-xs bg-emerald-50 text-emerald-800 p-3 rounded-xl shadow font-bold border border-emerald-200 block";
+        statusDiv.innerHTML = `✅ <strong>¡Importación completada!</strong><br>• Asignado a: ${assignedEmail}<br>• OTs nuevas creadas: ${importedOTCount}<br>• Visitas incorporadas: ${importedVisitsCount}`;
+        fileInput.value = '';
+
+      } catch (err) {
+        statusDiv.className = "text-xs bg-rose-50 text-rose-800 p-3 rounded-xl shadow font-bold border border-rose-200 block";
+        statusDiv.innerText = "❌ Error al procesar el Excel: " + err.message;
+      }
+    };
+
     // --- LÓGICA DE KILOMETRAJE ---
     function getSortedUserMileageLogs() {
       if (!currentUser) return [];
@@ -1059,7 +1293,7 @@
 
       const userLogs = getSortedUserMileageLogs();
       if (!userLogs.length) {
-        autoFillRecintosForDate();
+        handleActivityChange();
         return;
       }
 
@@ -1084,12 +1318,12 @@
         document.getElementById('km-inicio').value = '';
       }
 
-      autoFillRecintosForDate();
+      handleActivityChange();
       calcDailyKm();
     }
 
     window.handleKmDateChange = () => {
-      autoFillRecintosForDate();
+      handleActivityChange();
       if (!document.getElementById('km-edit-id').value) {
         handleKmPlateOrDateChange();
       }
@@ -1111,6 +1345,9 @@
     };
 
     function autoFillRecintosForDate() {
+      const act = document.getElementById('km-actividad')?.value || 'CST-AY';
+      if (!['CST-AY', 'CST-CNR', 'CST-ALE'].includes(act)) return;
+
       const targetDate = document.getElementById('km-date')?.value;
       if (!targetDate || !currentUser) return;
 
@@ -1236,7 +1473,6 @@
           });
         }
 
-        // Retroalimentación automática de Km hacia atrás
         if (curPlate && kmIni !== null && kmIni > 0) {
           const prevLog = getLastVehicleLogBeforeDate(curPlate, curDate);
           if (prevLog && (!prevLog.kmFin || prevLog.kmFin === 0)) {
@@ -1286,6 +1522,8 @@
           if (l.otrosGastosImporte) gastosArr.push(`${l.otrosGastosImporte}€ Otros`);
           const gastosStr = gastosArr.join(' · ') || 'Sin gastos adicionales';
 
+          const labelTipo = (l.actividad === 'CST-VEA' || l.actividad === 'CST-VEG') ? 'Explotaciones' : 'Recintos';
+
           return `
             <div class="bg-white p-3.5 rounded-xl text-xs space-y-2.5 shadow">
               <div class="flex justify-between items-center">
@@ -1302,7 +1540,7 @@
 
               <div class="flex justify-between items-center text-[11px] pt-1 border-t border-slate-100">
                 <div>
-                  <span class="text-slate-500 font-bold">Recintos:</span> <strong class="text-[#2c371b] font-bold">${l.rendimientoRecintos || 0}</strong>
+                  <span class="text-slate-500 font-bold">${labelTipo}:</span> <strong class="text-[#2c371b] font-bold">${l.rendimientoRecintos || 0}</strong>
                   <span class="mx-1.5 text-slate-300">|</span>
                   <span class="text-slate-500 font-bold">Km:</span> <strong class="text-slate-800 font-bold">${l.kmTotales || 0}</strong>
                 </div>
@@ -1349,7 +1587,7 @@
       lucide.createIcons();
     }
 
-    // --- FUNCIÓN: ACTUALIZAR SELECTOR DE MATRÍCULAS USADAS EN EL MES ---
+    // --- ACTUALIZAR SELECTOR DE MATRÍCULAS ---
     window.updateVehiclePlatesOptions = () => {
       const selectedMonth = document.getElementById('vehicle-export-month')?.value;
       const plateSelect = document.getElementById('vehicle-export-plate');
@@ -1370,10 +1608,11 @@
       }
     };
 
-    // --- FUNCIÓN: ACTUALIZAR INDICADORES DE DATOS EN TARJETA RAS ---
+    // --- ACTUALIZAR INDICADORES RAS ---
     function updateRASBadges() {
       if (!currentUser) return;
-      const userOTs = workOrders.filter(o => o.tecnicoId === currentUser.email || userRole === 'gestor');
+      // Solo evalúa las asignadas a este técnico
+      const userOTs = workOrders.filter(o => o.tecnicoId === currentUser.email);
 
       const hasCNR = userOTs.some(o => (o.campaniaId || '').toUpperCase() === 'CNR' && (o.historialDiario || []).length > 0);
       const hasRQNM = userOTs.some(o => ['AY', 'ALE', 'RQNM'].includes((o.campaniaId || '').toUpperCase()) && (o.historialDiario || []).length > 0);
@@ -1383,24 +1622,24 @@
 
       if (badgeCNR) {
         badgeCNR.innerHTML = hasCNR 
-          ? `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Datos listos` 
+          ? `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Datos listos` 
           : `<span class="w-2 h-2 rounded-full bg-slate-400"></span> Sin datos`;
         badgeCNR.className = hasCNR 
-          ? "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-950/40 text-emerald-200 flex items-center gap-1.5" 
+          ? "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-950/40 text-amber-200 border border-amber-400/30 shadow-xs flex items-center gap-1.5" 
           : "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5";
       }
 
       if (badgeRQNM) {
         badgeRQNM.innerHTML = hasRQNM 
-          ? `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> Datos listos` 
+          ? `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Datos listos` 
           : `<span class="w-2 h-2 rounded-full bg-slate-400"></span> Sin datos`;
         badgeRQNM.className = hasRQNM 
-          ? "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-emerald-950/40 text-emerald-200 flex items-center gap-1.5" 
+          ? "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-950/40 text-amber-200 border border-amber-400/30 shadow-xs flex items-center gap-1.5" 
           : "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5";
       }
     }
 
-    // --- FUNCIÓN: EXPORTACIÓN ACUMULATIVA DEL RAS (SEMANA A SEMANA) ---
+    // --- EXPORTACIÓN ACUMULATIVA RAS ---
     window.exportCumulativeRAS = async (campaignGroup) => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1408,17 +1647,18 @@
       }
 
       const curUserDoc = usersList.find(u => u.email === currentUser.email);
-      const userAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
+      const rawAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
+      const userAlias = rawAlias.trim();
+      const techUpper = userAlias.toUpperCase().replace(/[^A-Z0-9ÁÉÍÓÚÜÑ\s]/gi, '').trim();
 
-      // Filtrar las OTs de este técnico para este grupo de campaña
+      // En la descarga de parte técnico, únicamente exporta las OTs asignadas a este email
       const myOTs = workOrders.filter(o => {
-        const belongs = o.tecnicoId === currentUser.email || userRole === 'gestor';
+        const belongs = o.tecnicoId === currentUser.email;
         const c = (o.campaniaId || '').toUpperCase();
         const matches = campaignGroup === 'CNR' ? (c === 'CNR') : (c === 'AY' || c === 'ALE' || c === 'RQNM');
         return belongs && matches;
       }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
 
-      // 1. Recopilar todas las fechas en que se realizaron visitas para encontrar semanas de trabajo
       const allVisitDates = new Set();
       myOTs.forEach(ot => {
         (ot.historialDiario || []).forEach(h => {
@@ -1426,7 +1666,6 @@
         });
       });
 
-      // Función auxiliar para obtener el lunes de una fecha concreta
       const getMonday = (dStr) => {
         const d = new Date(dStr + 'T12:00:00');
         const day = d.getDay();
@@ -1435,9 +1674,7 @@
         return d.toISOString().split('T')[0];
       };
 
-      // Agrupar semanas únicas ordenadas cronológicamente
       const uniqueMondays = [...new Set([...allVisitDates].map(getMonday))].sort();
-
       const templateFileName = `plantilla_RAS_${campaignGroup}.xlsx`;
 
       try {
@@ -1450,14 +1687,13 @@
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.getWorksheet(1);
-
-        // Cabecera: Nombre y Apellidos del técnico en D4
+        const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
+        if (!worksheet) throw new Error("No se pudo acceder a la plantilla.");
+        
         worksheet.getCell('D4').value = userAlias;
 
-        let currentRow = 8; // La tabla de datos comienza en la fila 8
+        let currentRow = 8;
 
-        // Si no hay visitas registradas aún, dejamos una línea vacía con los datos de las OTs o descargamos limpia
         if (uniqueMondays.length === 0) {
           myOTs.forEach(ot => {
             worksheet.getCell(`C${currentRow}`).value = ot.nombre;
@@ -1467,11 +1703,10 @@
             currentRow++;
           });
         } else {
-          // Procesar cada semana cronológicamente (acumulativo hacia abajo)
           uniqueMondays.forEach(mondayStr => {
             const mondayDate = new Date(mondayStr + 'T12:00:00');
             const weekDates = [];
-            for (let i = 0; i < 6; i++) { // Lunes (0) a Sábado (5)
+            for (let i = 0; i < 6; i++) {
               const d = new Date(mondayDate);
               d.setDate(mondayDate.getDate() + i);
               weekDates.push(d.toISOString().split('T')[0]);
@@ -1481,7 +1716,6 @@
             const fmt = (s) => { const [y, m, dia] = s.split('-'); return `${dia}/${m}`; };
             const semanaRango = `${fmt(mondayStr)} - ${fmt(fridayStr)}`;
 
-            // Identificar qué OTs tuvieron actividad en esta semana
             myOTs.forEach(ot => {
               const hist = ot.historialDiario || [];
               const weekYield = [0, 0, 0, 0, 0, 0];
@@ -1496,16 +1730,13 @@
                 }
               });
 
-              // Solo imprimimos línea para esta OT si se trabajó en esta semana
               if (hasWorkThisWeek) {
                 const sumSemana = weekYield.reduce((a, b) => a + b, 0);
 
-                // Recintos acumulados en semanas anteriores a este lunes
                 const anteriores = hist
                   .filter(h => h.fecha < mondayStr)
                   .reduce((acc, h) => acc + (parseInt(h.recintosHoy) || 0), 0);
 
-                // Pendientes al cierre de esta semana (último registro hasta el sábado de esta semana)
                 const histWeekEnd = hist
                   .filter(h => h.fecha <= weekDates[5])
                   .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
@@ -1514,7 +1745,6 @@
                   ? histWeekEnd[0].recintosPendientes 
                   : (ot.recintosTotales - sumSemana);
 
-                // Escribir en la fila correspondiente
                 worksheet.getCell(`B${currentRow}`).value = semanaRango;
                 worksheet.getCell(`C${currentRow}`).value = ot.nombre;
                 worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
@@ -1534,8 +1764,14 @@
         }
 
         const buffer = await workbook.xlsx.writeBuffer();
-        const todayStr = new Date().toISOString().split('T')[0];
-        const fileName = `RAS_${campaignGroup}_Acumulado_${todayStr}.xlsx`;
+
+        let fileName = "";
+        if (campaignGroup === 'CNR') {
+          fileName = `RAS_CST-CNR_2026_${techUpper}.xlsx`;
+        } else {
+          fileName = `RAS_CST-RQNM_2026_${techUpper}.xlsx`;
+        }
+
         const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
         saveAs(blob, fileName);
 
@@ -1544,7 +1780,7 @@
       }
     };
 
-    // --- FUNCIÓN 2: EXPORTACIÓN PARTE DE ACTIVIDADES ---
+    // --- EXPORTACIÓN SEGUIMIENTO MENSUAL ---
     window.exportMonthlyReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1575,14 +1811,14 @@
       try {
         const response = await fetch('./Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx');
         if (!response.ok) {
-          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'. Asegúrate de que el archivo esté subido en la raíz de tu repositorio con ese nombre exacto.");
+          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'.");
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.getWorksheet(1);
+        const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
 
         worksheet.getCell('M6').value = year;
         worksheet.getCell('O6').value = monthNameUpper;
@@ -1637,7 +1873,7 @@
       }
     };
 
-    // --- FUNCIÓN 3: EXPORTACIÓN SEGUIMIENTO DE VEHÍCULO (PE-SGI-04) ---
+    // --- EXPORTACIÓN SEGUIMIENTO VEHÍCULO ---
     window.exportVehicleReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1678,14 +1914,14 @@
           response = await fetch('./Seguimiento_Vehiculo.xlsx');
         }
         if (!response.ok) {
-          throw new Error("No se pudo cargar 'Seguimiento Vehiculo.xlsx'. Asegúrate de que el archivo esté subido en la raíz de tu repositorio.");
+          throw new Error("No se pudo cargar 'Seguimiento Vehiculo.xlsx'.");
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.getWorksheet(1);
+        const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
 
         worksheet.getCell('D2').value = selectedPlate;
         worksheet.getCell('I2').value = year;
@@ -1737,6 +1973,7 @@
       document.getElementById('km-date').value = log.fecha || '';
       document.getElementById('km-gab-campo').value = log.gabineteCampo || 'Campo';
       document.getElementById('km-actividad').value = log.actividad || 'CST-AY';
+      handleActivityChange();
       document.getElementById('km-rendimiento').value = log.rendimientoRecintos || 0;
       document.getElementById('km-hora-in-1').value = log.horaEntrada1 || '';
       document.getElementById('km-hora-out-1').value = log.horaSalida1 || '';
@@ -1814,12 +2051,15 @@
       }
     };
 
-    // --- MÉTODOS OTs Y CONTROL ---
+    // --- MÉTODOS OTs Y CONTROL (FILTRADO ESTRICTO POR TÉCNICO) ---
     function renderOTSelect() {
       const select = document.getElementById('ot-select');
       select.innerHTML = '<option value="">-- Selecciona una OT --</option>';
 
-      const myOTs = workOrders.filter(ot => ot.tecnicoId === currentUser.email || userRole === 'gestor');
+      if (!currentUser) return;
+
+      // FILTRADO ESTRICTO: En la vista de técnico sólo se muestran las OTs asignadas a su correo
+      const myOTs = workOrders.filter(ot => ot.tecnicoId === currentUser.email);
 
       const inProgress = myOTs.filter(o => o.recintosRestantes > 0);
       const completed = myOTs.filter(o => o.recintosRestantes === 0);
@@ -1846,6 +2086,8 @@
       if (lastId && myOTs.some(o => o.id === lastId)) {
         select.value = lastId;
         selectOT(lastId);
+      } else if (currentOT && !myOTs.some(o => o.id === currentOT.id)) {
+        selectOT('');
       }
     }
 
@@ -1878,6 +2120,13 @@
         badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 shadow shrink-0";
       }
 
+      // Limpiar input de recintos visitados para evitar confusiones
+      const regVisited = document.getElementById('reg-visited');
+      if (regVisited) {
+        regVisited.value = '';
+        regVisited.max = currentOT.recintosRestantes;
+      }
+
       renderOTHistory();
     };
 
@@ -1893,72 +2142,106 @@
       histDiv.innerHTML = hist.map((h, idx) => `
         <div class="bg-white/90 p-2.5 rounded-xl text-xs flex justify-between items-center shadow">
           <div>
-            <span class="font-bold text-slate-700">${h.fecha}</span> — Rev: <strong class="text-[#2c371b]">${h.recintosHoy}</strong> (Pend: ${h.recintosPendientes})
+            <span class="font-bold text-slate-700">${h.fecha}</span> — Visitados: <strong class="text-[#2c371b]">${h.recintosHoy}</strong> (Pendientes: ${h.recintosPendientes})
           </div>
           <div class="flex gap-1">
-            <button onclick="editHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-[#728157] transition"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-            <button onclick="deleteHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-rose-700 transition"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+            <button onclick="editHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-[#728157] transition" title="Modificar recintos visitados"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="deleteHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-rose-700 transition" title="Eliminar visita"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
           </div>
         </div>
       `).join('');
       lucide.createIcons();
     }
 
+    // REGISTRO DE VISITA DIARIA: Ahora el técnico anota directamente los recintos visitados
     document.getElementById('form-daily').addEventListener('submit', async (e) => {
       e.preventDefault();
       if (!currentOT) return;
 
-      const pendingNew = parseInt(document.getElementById('reg-pending').value);
-      if (pendingNew > currentOT.recintosTotales) {
-        alert(`❌ Los recintos pendientes no pueden superar el total (${currentOT.recintosTotales}).`);
+      const visitedToday = parseInt(document.getElementById('reg-visited').value);
+      if (isNaN(visitedToday) || visitedToday <= 0) {
+        alert("❌ Debes indicar una cantidad de recintos visitados mayor que 0.");
         return;
       }
 
-      const visitedToday = currentOT.recintosRestantes - pendingNew;
+      if (visitedToday > currentOT.recintosRestantes) {
+        alert(`❌ Los recintos visitados hoy (${visitedToday}) no pueden ser mayores que los recintos pendientes actuales (${currentOT.recintosRestantes}).`);
+        return;
+      }
+
+      const inputDate = document.getElementById('reg-date').value;
       const newHistory = [...(currentOT.historialDiario || [])];
-      newHistory.unshift({
-        fecha: document.getElementById('reg-date').value,
-        recintosPendientes: pendingNew,
-        recintosHoy: visitedToday > 0 ? visitedToday : 0
+
+      newHistory.push({
+        fecha: inputDate,
+        recintosHoy: visitedToday,
+        recintosPendientes: 0
       });
+
+      // Recalcular cronológicamente el orden y pendientes de la OT completa
+      newHistory.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      let runningPending = currentOT.recintosTotales;
+      newHistory.forEach(item => {
+        runningPending = Math.max(0, runningPending - (item.recintosHoy || 0));
+        item.recintosPendientes = runningPending;
+      });
+
+      // Ordenar cronológicamente descendente para mostrar en la interfaz
+      newHistory.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const finalPending = newHistory.length > 0 ? newHistory[0].recintosPendientes : currentOT.recintosTotales;
 
       try {
         await updateDoc(doc(db, "work_orders", currentOT.id), {
-          recintosRestantes: pendingNew,
-          estado: pendingNew === 0 ? 'completada' : 'en_progreso',
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
           historialDiario: newHistory
         });
-        alert("Visita guardada.");
-        autoFillRecintosForDate();
+
+        document.getElementById('reg-visited').value = '';
+        alert("Visita registrada correctamente.");
+        handleActivityChange();
       } catch (error) {
-        alert("Error: " + error.message);
+        alert("Error al guardar visita: " + error.message);
       }
     });
 
     window.editHistoryItem = async (index) => {
       if (!currentOT) return;
-      const hist = currentOT.historialDiario || [];
+      const hist = [...(currentOT.historialDiario || [])];
       const item = hist[index];
       if (!item) return;
 
-      const newPending = prompt(`Modificar pendientes para ${item.fecha}:`, item.recintosPendientes);
-      if (newPending === null) return;
+      const newVisitedStr = prompt(`Modificar recintos visitados para la fecha ${item.fecha}:`, item.recintosHoy);
+      if (newVisitedStr === null) return;
 
-      const valPending = parseInt(newPending);
-      if (isNaN(valPending) || valPending < 0) return;
+      const newVisited = parseInt(newVisitedStr);
+      if (isNaN(newVisited) || newVisited <= 0) {
+        alert("❌ La cantidad debe ser un número entero mayor a 0. Para borrar la visita, usa el botón de papelera.");
+        return;
+      }
 
-      hist[index].recintosPendientes = valPending;
-      const latestPending = hist[0].recintosPendientes;
+      // Actualizar el valor y recalcular la secuencia cronológica entera
+      hist[index].recintosHoy = newVisited;
+
+      hist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      let runningPending = currentOT.recintosTotales;
+      hist.forEach(h => {
+        runningPending = Math.max(0, runningPending - (h.recintosHoy || 0));
+        h.recintosPendientes = runningPending;
+      });
+
+      hist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const finalPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
 
       try {
         await updateDoc(doc(db, "work_orders", currentOT.id), {
-          recintosRestantes: latestPending,
-          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
           historialDiario: hist
         });
-        autoFillRecintosForDate();
+        handleActivityChange();
       } catch (e) {
-        alert("Error: " + e.message);
+        alert("Error al actualizar visita: " + e.message);
       }
     };
 
@@ -1966,17 +2249,27 @@
       if (!currentOT || !confirm("¿Eliminar este registro de visita?")) return;
       const hist = [...(currentOT.historialDiario || [])];
       hist.splice(index, 1);
-      const latestPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
+
+      // Recalcular cronológicamente los pendientes tras borrar
+      hist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      let runningPending = currentOT.recintosTotales;
+      hist.forEach(h => {
+        runningPending = Math.max(0, runningPending - (h.recintosHoy || 0));
+        h.recintosPendientes = runningPending;
+      });
+
+      hist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const finalPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
 
       try {
         await updateDoc(doc(db, "work_orders", currentOT.id), {
-          recintosRestantes: latestPending,
-          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
           historialDiario: hist
         });
-        autoFillRecintosForDate();
+        handleActivityChange();
       } catch (e) {
-        alert("Error: " + e.message);
+        alert("Error al eliminar visita: " + e.message);
       }
     };
 
@@ -2152,11 +2445,13 @@
 
     window.switchGestorSubTab = (tab) => {
       document.getElementById('subtab-ots').classList.toggle('hidden', tab !== 'ots');
+      document.getElementById('subtab-import').classList.toggle('hidden', tab !== 'import');
       document.getElementById('subtab-plan').classList.toggle('hidden', tab !== 'plan');
       document.getElementById('subtab-users').classList.toggle('hidden', tab !== 'users');
       document.getElementById('subtab-rep').classList.toggle('hidden', tab !== 'rep');
 
       const btnOTs = document.getElementById('tab-btn-ots');
+      const btnImport = document.getElementById('tab-btn-import');
       const btnPlan = document.getElementById('tab-btn-plan');
       const btnUsers = document.getElementById('tab-btn-users');
       const btnRep = document.getElementById('tab-btn-rep');
@@ -2165,6 +2460,7 @@
       const inactiveClass = "px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]";
 
       btnOTs.className = tab === 'ots' ? activeClass : inactiveClass;
+      if (btnImport) btnImport.className = (tab === 'import' ? activeClass : inactiveClass) + " flex items-center gap-1";
       btnPlan.className = tab === 'plan' ? activeClass : inactiveClass;
       btnUsers.className = tab === 'users' ? activeClass : inactiveClass;
       btnRep.className = tab === 'rep' ? activeClass : inactiveClass;
