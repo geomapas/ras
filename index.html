@@ -124,7 +124,7 @@
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-2.5">
           <div class="flex items-center justify-between">
             <label class="block text-[11px] font-black text-[#222a16] uppercase">Mis Órdenes de Trabajo (OT)</label>
-            <button type="button" onclick="openAddOTModal()" class="px-2.5 py-1 bg-white text-[#2e371f] hover:bg-slate-100 rounded-lg text-xs font-black shadow flex items-center gap-1 transition">
+            <button type="button" onclick="openAddOTModal('tecnico')" class="px-2.5 py-1 bg-white text-[#2e371f] hover:bg-slate-100 rounded-lg text-xs font-black shadow flex items-center gap-1 transition">
               <i data-lucide="plus" class="w-3.5 h-3.5 text-[#728157]"></i> Añadir Nueva OT
             </button>
           </div>
@@ -493,9 +493,19 @@
       <!-- OTs Gestor -->
       <div id="subtab-ots" class="space-y-4">
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
-          <div class="flex justify-between items-center gap-2 border-b border-black/10 pb-2">
-            <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Listado OTs Regionales</h3>
-            <input type="text" id="filter-ot-table" oninput="renderOTTable()" placeholder="Buscar OT..." class="p-1.5 border-0 rounded-lg text-xs bg-white text-slate-800 w-44 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-4 h-4 text-[#728157]"></i> Listado OTs Regionales
+              </h3>
+              <p class="text-[10px] text-[#2c371b] font-bold">Gestión, alta y asignación a técnicos</p>
+            </div>
+            <div class="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
+              <input type="text" id="filter-ot-table" oninput="renderOTTable()" placeholder="Buscar OT o técnico..." class="flex-1 sm:w-48 p-1.5 border-0 rounded-lg text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+              <button type="button" onclick="openAddOTModal('gestor')" class="px-3 py-1.5 bg-white text-[#252e18] hover:bg-slate-100 rounded-lg text-xs font-black shadow flex items-center gap-1.5 transition whitespace-nowrap">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir OT
+              </button>
+            </div>
           </div>
           <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
             <table class="w-full text-xs text-left">
@@ -596,7 +606,7 @@
         </div>
       </div>
 
-      <!-- NUEVA PESTAÑA: ESTADÍSTICAS GESTOR -->
+      <!-- PESTAÑA: ESTADÍSTICAS GESTOR -->
       <div id="subtab-rep" class="hidden space-y-4 max-w-4xl mx-auto">
         <!-- Selector y Cabecera de Semana para Estadísticas -->
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
@@ -629,9 +639,7 @@
         </div>
 
         <!-- Contenedor dinámico de bloques estadísticos -->
-        <div id="stats-blocks-container" class="space-y-4">
-          <!-- Se inyectan únicamente los bloques con datos > 0 en la semana seleccionada -->
-        </div>
+        <div id="stats-blocks-container" class="space-y-4"></div>
       </div>
 
       <!-- PESTAÑA: IMPORTADOR RAS -->
@@ -688,31 +696,62 @@
     </section>
   </main>
 
-  <!-- MODAL PARA AÑADIR NUEVA OT (TÉCNICO / RÁPIDO) -->
-  <div id="modal-add-ot" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3">
-    <div class="bg-card-filled rounded-2xl max-w-sm w-full p-4 space-y-3 shadow-2xl">
+  <!-- MODAL PARA AÑADIR NUEVA OT (TÉCNICO Y GESTOR CON DETECCIÓN INTELIGENTE) -->
+  <div id="modal-add-ot" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl">
       <div class="flex justify-between items-center border-b border-black/10 pb-2">
-        <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+        <h3 id="modal-add-ot-title" class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
           <i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir Orden de Trabajo
         </h3>
-        <button onclick="closeAddOTModal()" class="text-[#2b351d] hover:text-black"><i data-lucide="x" class="w-4 h-4"></i></button>
+        <button onclick="closeAddOTModal()" class="text-[#2b351d] hover:text-black p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
       </div>
 
       <form id="form-tech-add-ot" class="space-y-3">
+        <!-- Campo selector de técnico (visible solo cuando se abre como gestor) -->
+        <div id="box-add-ot-tech-select" class="hidden bg-white/80 p-2.5 rounded-xl shadow-xs">
+          <label class="block text-[10px] font-black text-[#263018] uppercase mb-1 flex items-center gap-1">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-[#728157]"></i> Asignar al Técnico
+          </label>
+          <select id="add-ot-assigned-tech" class="w-full p-2 border-0 rounded-lg text-xs bg-white text-slate-800 font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
+            <option value="">-- Selecciona el técnico responsable --</option>
+          </select>
+        </div>
+
         <div>
           <label class="block text-[10px] font-black text-[#263018] uppercase mb-1">Código de la OT</label>
-          <input type="text" id="tech-ot-code-input" required placeholder="Ej: OT_CNR_2026_MB_ZONA_PORZUNA_CR_49" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          <input type="text" id="tech-ot-code-input" required oninput="previewParsedOT(this.value)" placeholder="Ej: OT_CNR_2026_MB_ZONA_PORZUNA_CR_49" class="w-full p-2.5 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
           <p class="text-[9px] text-[#242c17] mt-1 font-semibold leading-tight">
             Formato: <strong>OT_[Campaña]_[...Desc...]_[Provincia]_[Recintos]</strong><br>
             Campaña: <em>CNR, AY, ALE</em> | Prov: <em>AB, CR, CU, GU, TO</em>
           </p>
         </div>
 
-        <div id="tech-ot-error" class="hidden text-[11px] font-bold text-red-700 bg-white p-2 rounded-xl shadow border border-red-200"></div>
+        <!-- Tarjeta de Detección Automática Instantánea -->
+        <div id="ot-preview-card" class="hidden bg-white/90 p-3 rounded-xl shadow-sm border border-black/5 space-y-2">
+          <span class="text-[9px] font-black uppercase tracking-wider text-[#344122] flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3 text-[#728157]"></i> Detección Automática de Parámetros:
+          </span>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Campaña / RAS</span>
+              <strong id="preview-camp" class="text-[#2b351d] text-xs font-black">-</strong>
+            </div>
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Provincia</span>
+              <strong id="preview-prov" class="text-slate-800 text-xs font-black">-</strong>
+            </div>
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Nº Recintos</span>
+              <strong id="preview-rec" class="text-[#2b351d] text-xs font-black">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <div id="tech-ot-error" class="hidden text-[11px] font-bold text-red-700 bg-white p-2.5 rounded-xl shadow border border-red-200"></div>
 
         <div class="flex justify-end gap-2 pt-2 border-t border-black/10">
           <button type="button" onclick="closeAddOTModal()" class="px-3 py-1.5 bg-white text-[#2a331c] font-bold text-xs rounded-xl shadow hover:bg-slate-100 transition">Cancelar</button>
-          <button type="submit" class="px-4 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Añadir OT</button>
+          <button type="submit" id="btn-submit-add-ot" class="px-4 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Añadir OT</button>
         </div>
       </form>
     </div>
@@ -808,6 +847,7 @@
     let mileageLogs = [];
     let gestorSelectedMonday = null; // Lunes de la semana para Informes RAS
     let gestorStatsSelectedMonday = null; // Lunes de la semana para Estadísticas
+    let currentAddOTOrigin = 'tecnico'; // 'tecnico' o 'gestor'
 
     const MESES_TEXTO = [
       'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -1087,9 +1127,15 @@
     function populateTechSelects() {
       const editTechSelect = document.getElementById('edit-ot-tech');
       const importTechSelect = document.getElementById('ras-import-tech-override');
+      const addOtAssignedTechSelect = document.getElementById('add-ot-assigned-tech');
+
       const options = usersList.map(u => `<option value="${u.email}">${u.alias ? u.alias + ' - ' + u.email : u.email}</option>`).join('');
+      
       if (editTechSelect) editTechSelect.innerHTML = options;
       if (importTechSelect) importTechSelect.innerHTML = '<option value="">-- Detectar automáticamente por celda D4 --</option>' + options;
+      if (addOtAssignedTechSelect) {
+        addOtAssignedTechSelect.innerHTML = '<option value="">-- Selecciona el técnico responsable --</option>' + options;
+      }
     }
 
     window.switchRoleView = (role) => {
@@ -1138,7 +1184,6 @@
       }
     };
 
-    // --- RENDERIZADO DE INFORMES RAS PARA EL GESTOR ---
     function renderGestorRASReports() {
       if (!gestorSelectedMonday) return;
 
@@ -1242,7 +1287,6 @@
       `).join('');
     }
 
-    // --- NUEVO RENDERIZADO: ESTADÍSTICAS DEL GESTOR ---
     function renderGestorStatistics() {
       const container = document.getElementById('stats-blocks-container');
       if (!container) return;
@@ -1256,7 +1300,6 @@
         return;
       }
 
-      // Días de lunes a sábado de la semana seleccionada
       const mondayDate = new Date(gestorStatsSelectedMonday + 'T12:00:00');
       const weekDates = [];
       for (let i = 0; i < 6; i++) {
@@ -1267,7 +1310,6 @@
 
       const PROVINCIAS = ['Albacete', 'Ciudad Real', 'Cuenca', 'Guadalajara', 'Toledo'];
 
-      // Definición de las 4 categorías analíticas exclusivas de la pestaña de estadísticas
       const blocksConfig = [
         {
           id: 'rqnm_feader',
@@ -1315,7 +1357,6 @@
         }
       ];
 
-      // Computar visitas por provincia para cada bloque en la semana seleccionada
       const renderedBlocksHTML = [];
 
       blocksConfig.forEach(block => {
@@ -1355,7 +1396,6 @@
           }
         });
 
-        // REGLA CLAVE: "si hay bloque es que hay datos" -> solo renderizar si blockTotal > 0
         if (blockTotal > 0) {
           renderedBlocksHTML.push(`
             <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5 border-2 border-white/60">
@@ -1432,7 +1472,6 @@
       lucide.createIcons();
     }
 
-    // --- DESCARGA DE INFORME RAS DE UN TÉCNICO ESPECÍFICO (GESTOR O TÉCNICO) ---
     window.exportTechRAS = async (campaignGroup, techEmail) => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1578,13 +1617,11 @@
       }
     };
 
-    // Reutilizar exportTechRAS para la descarga propia del técnico
     window.exportCumulativeRAS = (campaignGroup) => {
       if (!currentUser) return;
       exportTechRAS(campaignGroup, currentUser.email);
     };
 
-    // --- LÓGICA DE ACTIVIDAD Y ETIQUETAS DINÁMICAS ---
     window.handleActivityChange = () => {
       const act = document.getElementById('km-actividad')?.value || 'CST-AY';
       const label = document.getElementById('km-rendimiento-label');
@@ -1616,11 +1653,29 @@
       }
     };
 
-    // --- LÓGICA DE PARSEO Y CREACIÓN DE OTs ---
-    window.openAddOTModal = () => {
+    window.openAddOTModal = (origin = 'tecnico') => {
+      currentAddOTOrigin = origin;
       document.getElementById('tech-ot-code-input').value = '';
       document.getElementById('tech-ot-error').classList.add('hidden');
+      document.getElementById('ot-preview-card').classList.add('hidden');
+
+      const modalTitle = document.getElementById('modal-add-ot-title');
+      const techSelectBox = document.getElementById('box-add-ot-tech-select');
+      const assignedTechSelect = document.getElementById('add-ot-assigned-tech');
+
+      if (origin === 'gestor') {
+        modalTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir y Asignar Orden de Trabajo (Gestor)`;
+        techSelectBox.classList.remove('hidden');
+        assignedTechSelect.setAttribute('required', 'required');
+        assignedTechSelect.value = '';
+      } else {
+        modalTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir Orden de Trabajo`;
+        techSelectBox.classList.add('hidden');
+        assignedTechSelect.removeAttribute('required');
+      }
+
       document.getElementById('modal-add-ot').classList.remove('hidden');
+      lucide.createIcons();
       document.getElementById('tech-ot-code-input').focus();
     };
 
@@ -1653,15 +1708,40 @@
         return { error: `Los recintos al final '${recintosStr}' deben ser un número entero mayor que 0.` };
       }
 
+      const rasGroup = camp === 'CNR' ? 'RAS Campaña CNR' : 'RAS Campaña RQNM';
+
       return {
         valid: true,
         nombre: code.trim(),
         campania: camp,
+        rasGroup: rasGroup,
         provincia: PROV_MAP[provCode],
         provinciaCode: provCode,
         recintosTotales: recintosNum
       };
     }
+
+    // Previsualización instantánea en tiempo real al escribir el código
+    window.previewParsedOT = (code) => {
+      const previewCard = document.getElementById('ot-preview-card');
+      const errDiv = document.getElementById('tech-ot-error');
+
+      if (!code || code.trim().length < 8) {
+        previewCard.classList.add('hidden');
+        return;
+      }
+
+      const parsed = parseAndValidateOT(code);
+      if (parsed.valid) {
+        errDiv.classList.add('hidden');
+        previewCard.classList.remove('hidden');
+        document.getElementById('preview-camp').innerText = `${parsed.campania} (${parsed.rasGroup})`;
+        document.getElementById('preview-prov').innerText = `${parsed.provincia} (${parsed.provinciaCode})`;
+        document.getElementById('preview-rec').innerText = `${parsed.recintosTotales} recintos`;
+      } else {
+        previewCard.classList.add('hidden');
+      }
+    };
 
     document.getElementById('form-tech-add-ot').addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -1685,13 +1765,25 @@
         return;
       }
 
+      // Determinar técnico asignado
+      let assignedTechEmail = currentUser.email;
+      if (currentAddOTOrigin === 'gestor') {
+        const selectedTech = document.getElementById('add-ot-assigned-tech').value;
+        if (!selectedTech) {
+          errDiv.innerText = "❌ Por favor, selecciona el técnico al que se asignará la OT.";
+          errDiv.classList.remove('hidden');
+          return;
+        }
+        assignedTechEmail = selectedTech;
+      }
+
       try {
         const docRef = await addDoc(collection(db, "work_orders"), {
           nombre: parsed.nombre,
           campaniaId: parsed.campania,
           provincia: parsed.provincia,
           provinciaCode: parsed.provinciaCode,
-          tecnicoId: currentUser.email,
+          tecnicoId: assignedTechEmail,
           recintosTotales: parsed.recintosTotales,
           recintosRestantes: parsed.recintosTotales,
           estado: 'en_progreso',
@@ -1700,15 +1792,19 @@
         });
 
         closeAddOTModal();
-        localStorage.setItem('ras_last_ot_' + currentUser.email, docRef.id);
-        alert(`OT creada correctamente:\n• Campaña: ${parsed.campania}\n• Provincia: ${parsed.provincia}\n• Recintos: ${parsed.recintosTotales}`);
+
+        const techDisplayName = getUserDisplayName(assignedTechEmail);
+        alert(`✅ OT creada y asignada con éxito:\n• Código: ${parsed.nombre}\n• Técnico Asignado: ${techDisplayName}\n• Planificación/Campaña: ${parsed.campania} (${parsed.rasGroup})\n• Provincia: ${parsed.provincia}\n• Recintos Totales: ${parsed.recintosTotales}`);
+
+        if (currentAddOTOrigin === 'tecnico') {
+          localStorage.setItem('ras_last_ot_' + currentUser.email, docRef.id);
+        }
       } catch (err) {
         errDiv.innerText = "❌ Error al guardar en base de datos: " + err.message;
         errDiv.classList.remove('hidden');
       }
     });
 
-    // --- FUNCIÓN DEL IMPORTADOR RAS (.XLSX) ---
     window.processRASImportFile = async () => {
       const fileInput = document.getElementById('ras-import-file');
       const statusDiv = document.getElementById('ras-import-status');
@@ -1871,7 +1967,6 @@
       }
     };
 
-    // --- LÓGICA DE KILOMETRAJE ---
     function getSortedUserMileageLogs() {
       if (!currentUser) return [];
       return mileageLogs
@@ -2190,7 +2285,6 @@
       lucide.createIcons();
     }
 
-    // --- ACTUALIZAR SELECTOR DE MATRÍCULAS ---
     window.updateVehiclePlatesOptions = () => {
       const selectedMonth = document.getElementById('vehicle-export-month')?.value;
       const plateSelect = document.getElementById('vehicle-export-plate');
@@ -2211,7 +2305,6 @@
       }
     };
 
-    // --- ACTUALIZAR INDICADORES RAS ---
     function updateRASBadges() {
       if (!currentUser) return;
       const userOTs = workOrders.filter(o => o.tecnicoId === currentUser.email);
@@ -2241,7 +2334,6 @@
       }
     }
 
-    // --- EXPORTACIÓN SEGUIMIENTO MENSUAL ---
     window.exportMonthlyReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -2334,7 +2426,6 @@
       }
     };
 
-    // --- EXPORTACIÓN SEGUIMIENTO VEHÍCULO ---
     window.exportVehicleReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -2512,7 +2603,6 @@
       }
     };
 
-    // --- MÉTODOS OTs Y CONTROL (FILTRADO ESTRICTO POR TÉCNICO) ---
     function renderOTSelect() {
       const select = document.getElementById('ot-select');
       select.innerHTML = '<option value="">-- Selecciona una OT --</option>';
@@ -2747,7 +2837,7 @@
           <tr class="hover:bg-slate-50 transition-colors">
             <td class="p-2.5 font-bold text-slate-800 break-all">${o.nombre}</td>
             <td class="p-2.5">${o.provincia}</td>
-            <td class="p-2.5 text-slate-700">${getUserDisplayName(o.tecnicoId)}</td>
+            <td class="p-2.5 text-slate-700 font-semibold">${getUserDisplayName(o.tecnicoId)}</td>
             <td class="p-2.5 text-right font-semibold">${o.recintosTotales}</td>
             <td class="p-2.5 text-right font-bold ${isDone ? 'text-[#2c371b]' : 'text-amber-700'}">${o.recintosRestantes}</td>
             <td class="p-2.5 text-center">
@@ -2756,8 +2846,8 @@
               </span>
             </td>
             <td class="p-2.5 text-center space-x-1">
-              <button onclick="openEditOTModal('${o.id}')" class="p-1 text-slate-500 hover:text-[#728157] transition"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-              <button onclick="deleteOT('${o.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+              <button onclick="openEditOTModal('${o.id}')" class="p-1 text-slate-500 hover:text-[#728157] transition" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+              <button onclick="deleteOT('${o.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
             </td>
           </tr>
         `;
