@@ -441,26 +441,6 @@
                 </button>
               </div>
             </div>
-
-            <!-- BLOQUE RQNM -->
-            <div class="p-3 bg-white/90 rounded-xl border border-black/5 space-y-2">
-              <div class="flex items-center justify-between">
-                <span class="font-black text-xs text-[#202714] flex items-center gap-1.5">
-                  <i data-lucide="folder-check" class="w-4 h-4 text-[#526338]"></i> RAS Campaña RQNM
-                </span>
-                <span id="badge-ras-rqnm" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
-                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
-                </span>
-              </div>
-              <div class="grid grid-cols-2 gap-2 pt-1">
-                <button type="button" onclick="exportCumulativeRAS('RQNM')" class="w-full py-2.5 px-2 bg-[#526338] hover:bg-[#43522f] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
-                  <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i> <span>Descargar (.xlsx)</span>
-                </button>
-                <button type="button" onclick="shareCumulativeRASNative('RQNM')" class="w-full py-2.5 px-2 bg-[#647942] hover:bg-[#526338] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
-                  <i data-lucide="share-2" class="w-3.5 h-3.5 shrink-0"></i> <span>Compartir Correo</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -1840,6 +1820,16 @@
       const buffer = await workbook.xlsx.writeBuffer();
 
       let fileName = "";
+      if (campaignGroup === 'CNR') {
+        fileName = `RAS_CST-CNR_2026_${techUpper}.xlsx`;
+      } else {
+        fileName = `RAS_CST-RQNM_2026_${techUpper}.xlsx`;
+      }
+
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return { blob, fileName, userAlias, techUpper };
+    }
+
     let currentPreparedShareData = null;
 
     window.exportCumulativeRAS = (campaignGroup) => {
@@ -1874,6 +1864,18 @@
 
         const subject = `RAS ${campaignGroup} ${userAlias}`;
         const body = `Adjunto el Registro de actividades semanal\n\n\nUn saludo`;
+
+        // 1. Guardar o sobrescribir como Documento Único en Firestore (Cero acumulación)
+        const deliveryDocId = `${currentUser.uid}_${campaignGroup}`;
+        await setDoc(doc(db, "ras_deliveries", deliveryDocId), {
+          tecnicoEmail: currentUser.email,
+          tecnicoNombre: userAlias,
+          campania: campaignGroup,
+          fileName: fileName,
+          fechaGeneracion: new Date().toISOString(),
+          destinatarios: recipients,
+          asunto: subject
+        });
 
         currentPreparedShareData = {
           blob,
@@ -1910,36 +1912,10 @@
       const { blob, fileName, recipients, subject } = currentPreparedShareData;
       const customBody = document.getElementById('send-email-body').value;
 
-      // 1. Descargar el archivo Excel oficial para que esté disponible en el almacenamiento
+      // Descargar el archivo Excel oficial para que esté disponible en el almacenamiento
       saveAs(blob, fileName);
 
-      // 2. Si el dispositivo soporta Web Share nativo con ficheros, intentamos abrir la hoja nativa
-      const file = new File([blob], fileName, { 
-        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        lastModified: Date.now()
-      });
-
-      let sharedNatively = false;
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        try {
-          await navigator.share({
-            files: [file],
-            title: subject,
-            text: `${customBody}\n\nDestinatarios: ${recipients.join(', ')}`
-          });
-          sharedNatively = true;
-          closeSendEmailModal();
-          return;
-        } catch (shareErr) {
-          if (shareErr.name === 'AbortError') {
-            closeSendEmailModal();
-            return;
-          }
-          // Si el SO rechaza el tipo de archivo, continúa con el fallback
-        }
-      }
-
-      // 3. Fallback directo: abrir aplicación de correo del dispositivo con destinatarios, asunto y cuerpo precargados
+      // Abrir aplicación de correo del dispositivo con destinatarios, asunto y cuerpo precargados
       const mailtoUrl = `mailto:${encodeURIComponent(recipients.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(customBody)}`;
       window.location.href = mailtoUrl;
 
