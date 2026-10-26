@@ -1913,7 +1913,13 @@
         try {
           const fileData = await buildTechRASFile(campaignGroup, currentUser.email);
           if (!fileData) return null;
-          const file = new File([fileData.blob], fileData.fileName, {
+          // Nombre "seguro" solo para compartir: sin acentos, ñ, espacios ni símbolos.
+          // Android/Chrome puede rechazar el share con "Permission denied" si el nombre del archivo los lleva.
+          const safeName = fileData.fileName
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^A-Za-z0-9._-]+/g, '_')
+            .replace(/_+/g, '_');
+          const file = new File([fileData.blob], safeName, {
             type: XLSX_MIME,
             lastModified: Date.now()
           });
@@ -1981,7 +1987,7 @@
           console.warn("Fallo en navigator.share:", shareErr.name, shareErr.message);
           alert("No se pudo abrir el menú de compartir.\nError: " + shareErr.name + " - " + shareErr.message +
                 "\nTamaño: " + entry.file.size + " bytes | Tipo: " + entry.file.type +
-                "\nNombre: " + entry.fileName +
+                "\nNombre compartido: " + entry.file.name +
                 "\nEn iframe: " + (window.self !== window.top) +
                 "\n\nSe descargará el archivo para que lo adjuntes manualmente.");
           saveAs(entry.blob, entry.fileName);
