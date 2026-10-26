@@ -395,24 +395,46 @@
             <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Acumulativo</span>
           </div>
 
-          <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2.5">
-            <button type="button" onclick="exportCumulativeRAS('CNR')" class="w-full py-3 px-3.5 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-between">
-              <span class="flex items-center gap-2">
-                <i data-lucide="download" class="w-4 h-4"></i> Descargar RAS Campaña CNR (.xlsx)
-              </span>
-              <span id="badge-ras-cnr" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
-              </span>
-            </button>
+          <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
+            <!-- BLOQUE CNR -->
+            <div class="p-3 bg-white/90 rounded-xl border border-black/5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-xs text-[#202714] flex items-center gap-1.5">
+                  <i data-lucide="folder-check" class="w-4 h-4 text-[#43522f]"></i> RAS Campaña CNR
+                </span>
+                <span id="badge-ras-cnr" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
+                </span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="exportCumulativeRAS('CNR')" class="w-full py-2.5 px-3 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar (.xlsx)
+                </button>
+                <button type="button" onclick="shareCumulativeRASEmail('CNR')" class="w-full py-2.5 px-3 bg-[#5c7040] hover:bg-[#4b5c34] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="mail" class="w-3.5 h-3.5"></i> Preparar Correo
+                </button>
+              </div>
+            </div>
 
-            <button type="button" onclick="exportCumulativeRAS('RQNM')" class="w-full py-3 px-3.5 bg-[#526338] hover:bg-[#43522f] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-between">
-              <span class="flex items-center gap-2">
-                <i data-lucide="download" class="w-4 h-4"></i> Descargar RAS Campaña RQNM (.xlsx)
-              </span>
-              <span id="badge-ras-rqnm" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
-                <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
-              </span>
-            </button>
+            <!-- BLOQUE RQNM -->
+            <div class="p-3 bg-white/90 rounded-xl border border-black/5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-xs text-[#202714] flex items-center gap-1.5">
+                  <i data-lucide="folder-check" class="w-4 h-4 text-[#526338]"></i> RAS Campaña RQNM
+                </span>
+                <span id="badge-ras-rqnm" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
+                </span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="exportCumulativeRAS('RQNM')" class="w-full py-2.5 px-3 bg-[#526338] hover:bg-[#43522f] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar (.xlsx)
+                </button>
+                <button type="button" onclick="shareCumulativeRASEmail('RQNM')" class="w-full py-2.5 px-3 bg-[#647942] hover:bg-[#526338] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="mail" class="w-3.5 h-3.5"></i> Preparar Correo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1472,13 +1494,8 @@
       lucide.createIcons();
     }
 
-    window.exportTechRAS = async (campaignGroup, techEmail) => {
-      if (!currentUser) {
-        alert("Debes iniciar sesión para descargar el parte.");
-        return;
-      }
-
-      const targetEmail = techEmail || currentUser.email;
+    // Construcción del archivo Excel RAS tanto para descarga como para preparar correo
+    async function buildTechRASFile(campaignGroup, targetEmail) {
       const targetUser = usersList.find(u => u.email.toLowerCase().trim() === targetEmail.toLowerCase().trim());
       const rawAlias = targetUser?.alias || targetEmail.split('@')[0];
       const userAlias = rawAlias.trim();
@@ -1493,7 +1510,7 @@
 
       if (!targetOTs.length) {
         alert(`No se encontraron OTs asignadas al técnico ${userAlias} para la campaña ${campaignGroup}.`);
-        return;
+        return null;
       }
 
       const allVisitDates = new Set();
@@ -1514,104 +1531,114 @@
       const uniqueMondays = [...new Set([...allVisitDates].map(getMonday))].sort();
       const templateFileName = `plantilla_RAS_${campaignGroup}.xlsx`;
 
-      try {
-        const response = await fetch(`./${templateFileName}`);
-        if (!response.ok) {
-          throw new Error(`No se pudo cargar '${templateFileName}'. Comprueba que el archivo esté disponible en el servidor.`);
-        }
+      const response = await fetch(`./${templateFileName}`);
+      if (!response.ok) {
+        throw new Error(`No se pudo cargar '${templateFileName}'. Comprueba que el archivo esté disponible en el servidor.`);
+      }
 
-        const arrayBuffer = await response.arrayBuffer();
-        const workbook = new ExcelJS.Workbook();
-        await workbook.xlsx.load(arrayBuffer);
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
-        if (!worksheet) throw new Error("No se pudo acceder a la plantilla.");
-        
-        worksheet.getCell('D4').value = userAlias;
+      const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
+      if (!worksheet) throw new Error("No se pudo acceder a la plantilla.");
+      
+      worksheet.getCell('D4').value = userAlias;
 
-        let currentRow = 8;
+      let currentRow = 8;
 
-        if (uniqueMondays.length === 0) {
+      if (uniqueMondays.length === 0) {
+        targetOTs.forEach(ot => {
+          worksheet.getCell(`C${currentRow}`).value = ot.nombre;
+          worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
+          worksheet.getCell(`E${currentRow}`).value = 0;
+          worksheet.getCell(`F${currentRow}`).value = Number(ot.recintosTotales || 0);
+          currentRow++;
+        });
+      } else {
+        uniqueMondays.forEach(mondayStr => {
+          const mondayDate = new Date(mondayStr + 'T12:00:00');
+          const weekDates = [];
+          for (let i = 0; i < 6; i++) {
+            const d = new Date(mondayDate);
+            d.setDate(mondayDate.getDate() + i);
+            weekDates.push(d.toISOString().split('T')[0]);
+          }
+
+          const fridayStr = weekDates[4];
+          const fmt = (s) => { const [y, m, dia] = s.split('-'); return `${dia}/${m}`; };
+          const semanaRango = `${fmt(mondayStr)} - ${fmt(fridayStr)}`;
+
           targetOTs.forEach(ot => {
-            worksheet.getCell(`C${currentRow}`).value = ot.nombre;
-            worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
-            worksheet.getCell(`E${currentRow}`).value = 0;
-            worksheet.getCell(`F${currentRow}`).value = Number(ot.recintosTotales || 0);
-            currentRow++;
-          });
-        } else {
-          uniqueMondays.forEach(mondayStr => {
-            const mondayDate = new Date(mondayStr + 'T12:00:00');
-            const weekDates = [];
-            for (let i = 0; i < 6; i++) {
-              const d = new Date(mondayDate);
-              d.setDate(mondayDate.getDate() + i);
-              weekDates.push(d.toISOString().split('T')[0]);
-            }
+            const hist = ot.historialDiario || [];
+            const weekYield = [0, 0, 0, 0, 0, 0];
+            let hasWorkThisWeek = false;
 
-            const fridayStr = weekDates[4];
-            const fmt = (s) => { const [y, m, dia] = s.split('-'); return `${dia}/${m}`; };
-            const semanaRango = `${fmt(mondayStr)} - ${fmt(fridayStr)}`;
-
-            targetOTs.forEach(ot => {
-              const hist = ot.historialDiario || [];
-              const weekYield = [0, 0, 0, 0, 0, 0];
-              let hasWorkThisWeek = false;
-
-              weekDates.forEach((dateStr, idx) => {
-                const h = hist.find(item => item.fecha === dateStr);
-                if (h) {
-                  const val = parseInt(h.recintosHoy) || 0;
-                  weekYield[idx] += val;
-                  if (val > 0) hasWorkThisWeek = true;
-                }
-              });
-
-              if (hasWorkThisWeek) {
-                const sumSemana = weekYield.reduce((a, b) => a + b, 0);
-
-                const anteriores = hist
-                  .filter(h => h.fecha < mondayStr)
-                  .reduce((acc, h) => acc + (parseInt(h.recintosHoy) || 0), 0);
-
-                const histWeekEnd = hist
-                  .filter(h => h.fecha <= weekDates[5])
-                  .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-
-                const pendientes = histWeekEnd.length > 0 
-                  ? histWeekEnd[0].recintosPendientes 
-                  : (ot.recintosTotales - sumSemana);
-
-                worksheet.getCell(`B${currentRow}`).value = semanaRango;
-                worksheet.getCell(`C${currentRow}`).value = ot.nombre;
-                worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
-                worksheet.getCell(`E${currentRow}`).value = Number(anteriores);
-                worksheet.getCell(`F${currentRow}`).value = Number(pendientes);
-
-                const colLetters = ['G', 'H', 'I', 'J', 'K', 'L'];
-                colLetters.forEach((col, i) => {
-                  worksheet.getCell(`${col}${currentRow}`).value = weekYield[i] > 0 ? Number(weekYield[i]) : "";
-                });
-
-                worksheet.getCell(`M${currentRow}`).value = Number(sumSemana);
-                currentRow++;
+            weekDates.forEach((dateStr, idx) => {
+              const h = hist.find(item => item.fecha === dateStr);
+              if (h) {
+                const val = parseInt(h.recintosHoy) || 0;
+                weekYield[idx] += val;
+                if (val > 0) hasWorkThisWeek = true;
               }
             });
+
+            if (hasWorkThisWeek) {
+              const sumSemana = weekYield.reduce((a, b) => a + b, 0);
+
+              const anteriores = hist
+                .filter(h => h.fecha < mondayStr)
+                .reduce((acc, h) => acc + (parseInt(h.recintosHoy) || 0), 0);
+
+              const histWeekEnd = hist
+                .filter(h => h.fecha <= weekDates[5])
+                .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+              const pendientes = histWeekEnd.length > 0 
+                ? histWeekEnd[0].recintosPendientes 
+                : (ot.recintosTotales - sumSemana);
+
+              worksheet.getCell(`B${currentRow}`).value = semanaRango;
+              worksheet.getCell(`C${currentRow}`).value = ot.nombre;
+              worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
+              worksheet.getCell(`E${currentRow}`).value = Number(anteriores);
+              worksheet.getCell(`F${currentRow}`).value = Number(pendientes);
+
+              const colLetters = ['G', 'H', 'I', 'J', 'K', 'L'];
+              colLetters.forEach((col, i) => {
+                worksheet.getCell(`${col}${currentRow}`).value = weekYield[i] > 0 ? Number(weekYield[i]) : "";
+              });
+
+              worksheet.getCell(`M${currentRow}`).value = Number(sumSemana);
+              currentRow++;
+            }
           });
-        }
+        });
+      }
 
-        const buffer = await workbook.xlsx.writeBuffer();
+      const buffer = await workbook.xlsx.writeBuffer();
 
-        let fileName = "";
-        if (campaignGroup === 'CNR') {
-          fileName = `RAS_CST-CNR_2026_${techUpper}.xlsx`;
-        } else {
-          fileName = `RAS_CST-RQNM_2026_${techUpper}.xlsx`;
-        }
+      let fileName = "";
+      if (campaignGroup === 'CNR') {
+        fileName = `RAS_CST-CNR_2026_${techUpper}.xlsx`;
+      } else {
+        fileName = `RAS_CST-RQNM_2026_${techUpper}.xlsx`;
+      }
 
-        const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-        saveAs(blob, fileName);
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return { blob, fileName, userAlias, techUpper };
+    }
 
+    window.exportTechRAS = async (campaignGroup, techEmail) => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para descargar el parte.");
+        return;
+      }
+
+      try {
+        const fileData = await buildTechRASFile(campaignGroup, techEmail || currentUser.email);
+        if (!fileData) return;
+        saveAs(fileData.blob, fileData.fileName);
       } catch (err) {
         alert("❌ Error al exportar RAS del técnico: " + err.message);
       }
@@ -1620,6 +1647,46 @@
     window.exportCumulativeRAS = (campaignGroup) => {
       if (!currentUser) return;
       exportTechRAS(campaignGroup, currentUser.email);
+    };
+
+    // Función para abrir la app de correo con todos los datos cargados y descargar el archivo
+    window.shareCumulativeRASEmail = async (campaignGroup) => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para preparar el correo.");
+        return;
+      }
+
+      try {
+        const fileData = await buildTechRASFile(campaignGroup, currentUser.email);
+        if (!fileData) return;
+
+        const { blob, fileName, userAlias } = fileData;
+
+        // Destinatarios según la campaña indicada
+        let recipients = [];
+        if (campaignGroup === 'CNR') {
+          recipients = ['arojo@geacam.com', 'asotos@geacam.com'];
+        } else {
+          recipients = ['arojo@geacam.com', 'sgonzalez@geacam.com'];
+        }
+
+        // Asunto exacto: "RAS + CNR (o RQNM) + Nombre técnico"
+        const subject = `RAS ${campaignGroup} ${userAlias}`;
+        
+        // Cuerpo de correo editable
+        const body = `Hola,\n\nAdjunto el Registro de Actividades Semanal (${campaignGroup}) correspondiente a mis intervenciones de campo.\n\nTécnico: ${userAlias}\nArchivo: ${fileName}\n\nUn saludo.`;
+
+        // 1. Descargamos el archivo .xlsx generado para que quede listo en el dispositivo del técnico
+        saveAs(blob, fileName);
+
+        // 2. Abrimos la aplicación de correo del usuario (Outlook, Mail, etc.)
+        // con los destinatarios, asunto y cuerpo precargados
+        const mailtoUrl = `mailto:${encodeURIComponent(recipients.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailtoUrl;
+
+      } catch (err) {
+        alert("❌ Error al preparar el correo: " + err.message);
+      }
     };
 
     window.handleActivityChange = () => {
