@@ -1857,92 +1857,74 @@
         return;
       }
 
+      // 1. Obtener destinatarios en memoria sin demoras asíncronas adicionales
+      let recipients = [];
+      if (campaignGroup === 'CNR') {
+        recipients = (emailConfig.cnrRecipients && emailConfig.cnrRecipients.length > 0)
+          ? emailConfig.cnrRecipients 
+          : ['arojo@geacam.com', 'asotos@geacam.com'];
+      } else {
+        recipients = (emailConfig.rqnmRecipients && emailConfig.rqnmRecipients.length > 0)
+          ? emailConfig.rqnmRecipients 
+          : ['arojo@geacam.com', 'sgonzalez@geacam.com'];
+      }
+
       try {
+        // 2. Construcción del archivo Excel
         const fileData = await buildTechRASFile(campaignGroup, currentUser.email);
         if (!fileData) return;
 
         const { blob, fileName, userAlias } = fileData;
-
-        // Destinatarios leídos desde Firestore
-        let recipients = [];
-        if (campaignGroup === 'CNR') {
-          recipients = (emailConfig.cnrRecipients && emailConfig.cnrRecipients.length > 0)
-            ? emailConfig.cnrRecipients 
-            : ['arojo@geacam.com', 'asotos@geacam.com'];
-        } else {
-          recipients = (emailConfig.rqnmRecipients && emailConfig.rqnmRecipients.length > 0)
-            ? emailConfig.rqnmRecipients 
-            : ['arojo@geacam.com', 'sgonzalez@geacam.com'];
-        }
-
         const subject = `RAS ${campaignGroup} ${userAlias}`;
         const body = "Adjunto el Registro de actividades semanal\n\n\nUn saludo";
 
-        // Registro de entrega en Firestore (Documento Único sobrescribible por técnico)
-        try {
-          const deliveryDocId = `${currentUser.uid}_${campaignGroup}`;
-          await setDoc(doc(db, "ras_deliveries", deliveryDocId), {
-            tecnicoEmail: currentUser.email,
-            tecnicoNombre: userAlias,
-            campania: campaignGroup,
-            fileName: fileName,
-            fechaGeneracion: new Date().toISOString(),
-            destinatarios: recipients,
-            asunto: subject
-          });
-        } catch (dbErr) {
-          console.warn("Aviso al registrar entrega en Firestore:", dbErr.message);
-        }
+        // Registro silencioso en Firestore sin bloquear la UI
+        const deliveryDocId = `${currentUser.uid}_${campaignGroup}`;
+        setDoc(doc(db, "ras_deliveries", deliveryDocId), {
+          tecnicoEmail: currentUser.email,
+          tecnicoNombre: userAlias,
+          campania: campaignGroup,
+          fileName: fileName,
+          fechaGeneracion: new Date().toISOString(),
+          destinatarios: recipients,
+          asunto: subject
+        }).catch(err => console.warn("Aviso Firestore:", err));
 
-        // Crear el objeto File real con el tipo MIME exacto de Excel
+        // 3. Crear el objeto File con el MIME exacto de Excel
         const file = new File([blob], fileName, {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
           lastModified: Date.now()
         });
 
-        // Copiar los destinatarios al portapapeles para facilitar pegarlos en Gmail/Outlook
-        if (recipients.length > 0) {
-          try {
-            const tempInput = document.createElement('textarea');
-            tempInput.value = recipients.join(', ');
-            document.body.appendChild(tempInput);
-            tempInput.select();
-            document.execCommand('copy');
-            document.body.removeChild(tempInput);
-          } catch (clipErr) {
-            console.log("No se pudo copiar destinatarios al portapapeles:", clipErr);
-          }
-        }
+        // 4. Intentar compartir nativamente con Android Sharesheet
+        let sharedSuccessfully = false;
 
-        // Invocar el menú nativo de Compartir de Android / iOS
-        if (navigator.share) {
-          // Intentar compartir directamente con el archivo
-          if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
             await navigator.share({
               files: [file],
               title: subject,
               text: body
             });
+            sharedSuccessfully = true;
             return;
-          } else {
-            // Si el navegador móvil permite share pero bloquea la lista de archivos directa
-            await navigator.share({
-              title: subject,
-              text: `${body}\n\n[Destinatarios: ${recipients.join(', ')}]`
-            });
-            saveAs(blob, fileName);
-            return;
+          } catch (shareErr) {
+            // Si el usuario simplemente canceló el menú nativo, no hacemos nada
+            if (shareErr.name === 'AbortError') return;
+            console.warn("Fallo en navigator.share con archivos:", shareErr.message);
           }
         }
 
-        // Si se abre desde un PC/escritorio sin Web Share
-        saveAs(blob, fileName);
-        alert(`Archivo ${fileName} descargado.\n\nDestinatarios: ${recipients.join(', ')}\nAsunto: ${subject}`);
+        // 5. Fallback limpio si Android o el visor bloquea los permisos (Permission Denied)
+        if (!sharedSuccessfully) {
+          saveAs(blob, fileName);
+          const mailtoUrl = `mailto:${encodeURIComponent(recipients.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+          window.location.href = mailtoUrl;
+        }
 
       } catch (err) {
-        // Si el usuario simplemente canceló el menú nativo de compartir, no mostramos error
         if (err.name === 'AbortError') return;
-        alert("Error al compartir: " + err.message);
+        alert("Aviso: " + err.message);
       }
     };
 
