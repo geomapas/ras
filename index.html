@@ -1247,23 +1247,29 @@
     window.handleLogout = () => signOut(auth);
 
     function listenToFirestoreData() {
+      // 1. Escuchar usuarios
       onSnapshot(collection(db, "users"), (snapshot) => {
         usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const curU = usersList.find(u => u.email === currentUser?.email);
-        const nameToShow = curU?.alias || currentUser?.email || 'Usuario';
-        document.getElementById('user-display-email').innerText = `${nameToShow} (${currentUser?.email})`;
+        const curU = usersList.find(u => u.email?.toLowerCase().trim() === currentUser?.email?.toLowerCase().trim());
+        const nameToShow = curU?.alias || currentUser?.email?.split('@')[0] || 'Usuario';
+        const displayEl = document.getElementById('user-display-email');
+        if (displayEl) {
+          displayEl.innerText = `${nameToShow} (${currentUser?.email})`;
+        }
         populateTechSelects();
         renderUsersTable();
+      }, (err) => {
+        console.warn("Aviso al consultar users:", err.message);
       });
 
-      // Escuchar la configuración segura de destinatarios de correo desde Firestore
+      // 2. Escuchar la configuración segura de destinatarios de correo desde Firestore
       onSnapshot(doc(db, "settings", "email_config"), (docSnap) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           emailConfig.cnrRecipients = Array.isArray(data.cnrRecipients) ? data.cnrRecipients : [];
           emailConfig.rqnmRecipients = Array.isArray(data.rqnmRecipients) ? data.rqnmRecipients : [];
         } else {
-          // Inicialización segura por defecto en base de datos si aún no existe
+          // Inicialización por defecto en base de datos si no existe
           emailConfig.cnrRecipients = ['arojo@geacam.com', 'asotos@geacam.com'];
           emailConfig.rqnmRecipients = ['arojo@geacam.com', 'sgonzalez@geacam.com'];
           setDoc(doc(db, "settings", "email_config"), emailConfig).catch(console.error);
@@ -1273,6 +1279,7 @@
         console.warn("Aviso al consultar email_config de Firestore:", err.message);
       });
 
+      // 3. Escuchar Órdenes de Trabajo (OTs)
       onSnapshot(collection(db, "work_orders"), (snapshot) => {
         workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
@@ -1295,17 +1302,25 @@
 
         handleActivityChange();
         updateRASBadges();
+      }, (err) => {
+        console.warn("Aviso al consultar work_orders:", err.message);
       });
 
+      // 4. Escuchar Campañas
       onSnapshot(collection(db, "campaigns"), (snapshot) => {
         campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }, (err) => {
+        console.warn("Aviso al consultar campaigns:", err.message);
       });
 
+      // 5. Escuchar Kilometraje y Jornadas
       onSnapshot(collection(db, "mileage_logs"), (snapshot) => {
         mileageLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderMileageLogs();
         prefillMileageDefaults();
         updateVehiclePlatesOptions();
+      }, (err) => {
+        console.warn("Aviso al consultar mileage_logs:", err.message);
       });
     }
 
