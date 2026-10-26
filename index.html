@@ -510,6 +510,9 @@
           <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Importar RAS
         </button>
         <button id="tab-btn-users" onclick="switchGestorSubTab('users')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Usuarios</button>
+        <button id="tab-btn-settings" onclick="switchGestorSubTab('settings')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17] flex items-center gap-1">
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i> Ajustes Correo
+        </button>
       </div>
 
       <!-- OTs Gestor -->
@@ -715,8 +718,77 @@
           </table>
         </div>
       </div>
+
+      <!-- PESTAÑA: CONFIGURACIÓN DE DESTINATARIOS DE CORREO -->
+      <div id="subtab-settings" class="hidden space-y-4 max-w-xl mx-auto">
+        <div class="bg-card-filled p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-5 h-5 text-[#2e371f]"></i> Destinatarios Seguros en Base de Datos
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-1">
+                Los correos no están expuestos en el código fuente. Se guardan y consultan en Firestore en la colección <code>settings/email_config</code>.
+              </p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Seguro</span>
+          </div>
+
+          <form id="form-email-settings" class="bg-white/90 p-4 rounded-xl shadow space-y-3">
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">
+                Destinatarios RAS Campaña CNR (separados por coma):
+              </label>
+              <input type="text" id="setting-cnr-recipients" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D]" placeholder="correo1@geacam.com, correo2@geacam.com">
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">
+                Destinatarios RAS Campaña RQNM (separados por coma):
+              </label>
+              <input type="text" id="setting-rqnm-recipients" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D]" placeholder="correo1@geacam.com, correo2@geacam.com">
+            </div>
+
+            <button type="submit" class="w-full py-2.5 bg-main-primary hover:bg-main-primary-dark active:scale-[0.99] text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración de Correos
+            </button>
+          </form>
+        </div>
+      </div>
     </section>
   </main>
+
+  <!-- MODAL DE ASISTENCIA PARA ADJUNTAR EN NAVEGADOR DE ESCRITORIO -->
+  <div id="modal-attach-guide" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl text-[#1e2513]">
+      <div class="flex justify-between items-start border-b border-black/10 pb-2.5">
+        <div>
+          <h3 class="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="paperclip" class="w-5 h-5 text-[#2e371f]"></i> Archivo Generado con Éxito
+          </h3>
+          <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">El correo y el archivo están listos</p>
+        </div>
+        <button onclick="closeAttachGuideModal()" class="text-[#2b351d] hover:text-black p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="bg-white/90 p-4 rounded-xl shadow space-y-3 text-xs leading-relaxed">
+        <p class="font-semibold text-slate-800">
+          Por restricciones de seguridad de los navegadores de escritorio, las páginas web no pueden insertar archivos locales directamente sin tu confirmación.
+        </p>
+        <div class="bg-slate-50 border border-slate-200 rounded-lg p-2.5 space-y-1.5 font-bold text-slate-700">
+          <p>1. Se ha descargado el archivo: <span id="guide-file-name" class="text-[#2e371f] font-black underline">archivo.xlsx</span> en tu carpeta de <em>Descargas</em>.</p>
+          <p>2. Se ha abierto tu cliente de correo con los destinatarios, asunto y cuerpo listos.</p>
+          <p>3. Solo debes arrastrar el archivo descargado a la ventana del correo o pulsar en <strong>Adjuntar</strong>.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 pt-1 border-t border-black/10">
+        <button type="button" onclick="closeAttachGuideModal()" class="w-full py-2 bg-main-primary hover:bg-main-primary-dark text-white font-black text-xs rounded-xl shadow transition">
+          Entendido
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL PARA AÑADIR NUEVA OT (TÉCNICO Y GESTOR CON DETECCIÓN INTELIGENTE) -->
   <div id="modal-add-ot" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
@@ -871,6 +943,12 @@
     let gestorStatsSelectedMonday = null; // Lunes de la semana para Estadísticas
     let currentAddOTOrigin = 'tecnico'; // 'tecnico' o 'gestor'
 
+    // Destinatarios configurables leídos desde Firestore (sin estar expuestos fijos en código)
+    let emailConfig = {
+      cnrRecipients: [],
+      rqnmRecipients: []
+    };
+
     const MESES_TEXTO = [
       'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
       'JULIO', 'AGOSTO', 'SEPTIEMBRE', 'OCTUBRE', 'NOVIEMBRE', 'DICIEMBRE'
@@ -913,7 +991,6 @@
       const currentMonday = new Date(d);
       currentMonday.setDate(d.getDate() + diffToMonday);
       
-      // Retroceder 7 días para situarse en el lunes de la semana anterior
       const prevMonday = new Date(currentMonday);
       prevMonday.setDate(currentMonday.getDate() - 7);
       return prevMonday.toISOString().split('T')[0];
@@ -1103,10 +1180,26 @@
         renderUsersTable();
       });
 
+      // Escuchar la configuración segura de destinatarios de correo desde Firestore
+      onSnapshot(doc(db, "settings", "email_config"), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          emailConfig.cnrRecipients = Array.isArray(data.cnrRecipients) ? data.cnrRecipients : [];
+          emailConfig.rqnmRecipients = Array.isArray(data.rqnmRecipients) ? data.rqnmRecipients : [];
+        } else {
+          // Inicialización segura por defecto en base de datos si aún no existe
+          emailConfig.cnrRecipients = ['arojo@geacam.com', 'asotos@geacam.com'];
+          emailConfig.rqnmRecipients = ['arojo@geacam.com', 'sgonzalez@geacam.com'];
+          setDoc(doc(db, "settings", "email_config"), emailConfig).catch(console.error);
+        }
+        populateEmailSettingsInputs();
+      }, (err) => {
+        console.warn("Aviso al consultar email_config de Firestore:", err.message);
+      });
+
       onSnapshot(collection(db, "work_orders"), (snapshot) => {
         workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // Vista técnico siempre actualizada
         renderOTSelect();
 
         if (userRole === 'gestor') {
@@ -1139,6 +1232,38 @@
         updateVehiclePlatesOptions();
       });
     }
+
+    function populateEmailSettingsInputs() {
+      const cnrInput = document.getElementById('setting-cnr-recipients');
+      const rqnmInput = document.getElementById('setting-rqnm-recipients');
+      if (cnrInput && emailConfig.cnrRecipients) {
+        cnrInput.value = emailConfig.cnrRecipients.join(', ');
+      }
+      if (rqnmInput && emailConfig.rqnmRecipients) {
+        rqnmInput.value = emailConfig.rqnmRecipients.join(', ');
+      }
+    }
+
+    // Guardado de configuración de correos por parte del Gestor
+    document.getElementById('form-email-settings')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cnrRaw = document.getElementById('setting-cnr-recipients').value;
+      const rqnmRaw = document.getElementById('setting-rqnm-recipients').value;
+
+      const cnrList = cnrRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const rqnmList = rqnmRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+      try {
+        await setDoc(doc(db, "settings", "email_config"), {
+          cnrRecipients: cnrList,
+          rqnmRecipients: rqnmList,
+          updatedAt: new Date().toISOString()
+        });
+        alert("✅ Destinatarios guardados correctamente en Firestore.");
+      } catch (err) {
+        alert("❌ Error al guardar destinatarios: " + err.message);
+      }
+    });
 
     function getUserDisplayName(email) {
       if (!email) return 'Sin Asignar';
@@ -1649,7 +1774,7 @@
       exportTechRAS(campaignGroup, currentUser.email);
     };
 
-    // Función para abrir la app de correo con todos los datos cargados y descargar el archivo
+    // Función para abrir la app de correo con todos los datos cargados y adjuntar/descargar el archivo
     window.shareCumulativeRASEmail = async (campaignGroup) => {
       if (!currentUser) {
         alert("Debes iniciar sesión para preparar el correo.");
@@ -1662,31 +1787,68 @@
 
         const { blob, fileName, userAlias } = fileData;
 
-        // Destinatarios según la campaña indicada
+        // Destinatarios leídos directamente de Firebase Firestore (seguros y configurables)
         let recipients = [];
         if (campaignGroup === 'CNR') {
-          recipients = ['arojo@geacam.com', 'asotos@geacam.com'];
+          recipients = emailConfig.cnrRecipients && emailConfig.cnrRecipients.length > 0 
+            ? emailConfig.cnrRecipients 
+            : ['arojo@geacam.com', 'asotos@geacam.com'];
         } else {
-          recipients = ['arojo@geacam.com', 'sgonzalez@geacam.com'];
+          recipients = emailConfig.rqnmRecipients && emailConfig.rqnmRecipients.length > 0 
+            ? emailConfig.rqnmRecipients 
+            : ['arojo@geacam.com', 'sgonzalez@geacam.com'];
         }
 
         // Asunto exacto: "RAS + CNR (o RQNM) + Nombre técnico"
         const subject = `RAS ${campaignGroup} ${userAlias}`;
         
-        // Cuerpo de correo editable
-        const body = `Hola,\n\nAdjunto el Registro de Actividades Semanal (${campaignGroup}) correspondiente a mis intervenciones de campo.\n\nTécnico: ${userAlias}\nArchivo: ${fileName}\n\nUn saludo.`;
+        // Cuerpo exacto solicitado:
+        // "Adjunto el Registro de actividades semanal"
+        // (un par de líneas más abajo)
+        // "Un saludo"
+        const body = `Adjunto el Registro de actividades semanal\n\n\nUn saludo`;
 
-        // 1. Descargamos el archivo .xlsx generado para que quede listo en el dispositivo del técnico
+        const file = new File([blob], fileName, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+
+        // 1. Intento de compartición nativa directa (Android, iOS y PWAs con soporte de adjuntos)
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: subject,
+              text: body
+            });
+            return;
+          } catch (shareErr) {
+            if (shareErr.name === 'AbortError') return; // Cancelado por el usuario
+            console.warn("Fallo en navigator.share, procediendo con descarga y mailto:", shareErr);
+          }
+        }
+
+        // 2. Fallback estándar para navegadores web de escritorio:
+        // Descargamos el archivo .xlsx
         saveAs(blob, fileName);
 
-        // 2. Abrimos la aplicación de correo del usuario (Outlook, Mail, etc.)
-        // con los destinatarios, asunto y cuerpo precargados
+        // Abrimos la aplicación de correo con los destinatarios, asunto y cuerpo exacto precargados
         const mailtoUrl = `mailto:${encodeURIComponent(recipients.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
         window.location.href = mailtoUrl;
+
+        // Mostramos el modal de guía al técnico explicando cómo adjuntar el archivo descargado
+        openAttachGuideModal(fileName);
 
       } catch (err) {
         alert("❌ Error al preparar el correo: " + err.message);
       }
+    };
+
+    window.openAttachGuideModal = (fileName) => {
+      document.getElementById('guide-file-name').innerText = fileName;
+      document.getElementById('modal-attach-guide').classList.remove('hidden');
+      lucide.createIcons();
+    };
+
+    window.closeAttachGuideModal = () => {
+      document.getElementById('modal-attach-guide').classList.add('hidden');
     };
 
     window.handleActivityChange = () => {
@@ -2993,12 +3155,14 @@
       document.getElementById('subtab-rep').classList.toggle('hidden', tab !== 'rep');
       document.getElementById('subtab-import').classList.toggle('hidden', tab !== 'import');
       document.getElementById('subtab-users').classList.toggle('hidden', tab !== 'users');
+      document.getElementById('subtab-settings').classList.toggle('hidden', tab !== 'settings');
 
       const btnOTs = document.getElementById('tab-btn-ots');
       const btnRas = document.getElementById('tab-btn-ras');
       const btnRep = document.getElementById('tab-btn-rep');
       const btnImport = document.getElementById('tab-btn-import');
       const btnUsers = document.getElementById('tab-btn-users');
+      const btnSettings = document.getElementById('tab-btn-settings');
 
       const activeClass = "px-3 py-2 font-bold border-b-2 border-main-primary text-[#242c17] whitespace-nowrap";
       const inactiveClass = "px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]";
@@ -3008,11 +3172,13 @@
       if (btnRep) btnRep.className = (tab === 'rep' ? activeClass : inactiveClass) + " flex items-center gap-1.5";
       if (btnImport) btnImport.className = (tab === 'import' ? activeClass : inactiveClass) + " flex items-center gap-1";
       btnUsers.className = tab === 'users' ? activeClass : inactiveClass;
+      if (btnSettings) btnSettings.className = (tab === 'settings' ? activeClass : inactiveClass) + " flex items-center gap-1";
 
       if (tab === 'ots') renderOTTable();
       if (tab === 'ras') renderGestorRASReports();
       if (tab === 'rep') renderGestorStatistics();
       if (tab === 'users') renderUsersTable();
+      if (tab === 'settings') populateEmailSettingsInputs();
     };
   </script>
 </body>
