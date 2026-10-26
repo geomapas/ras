@@ -1845,83 +1845,175 @@
       return { blob, fileName, userAlias, techUpper };
     }
 
+    // (RESTAURADA) Descarga directa del RAS de un técnico. Faltaba en la versión anterior
+    // y por eso los botones "Descargar (.xlsx)" y "Descargar RAS" del gestor no funcionaban.
+    window.exportTechRAS = async (campaignGroup, techEmail) => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para descargar el parte.");
+        return;
+      }
+
+      try {
+        const fileData = await buildTechRASFile(campaignGroup, techEmail || currentUser.email);
+        if (!fileData) return;
+        saveAs(fileData.blob, fileData.fileName);
+      } catch (err) {
+        alert("❌ Error al exportar RAS del técnico: " + err.message);
+      }
+    };
+
     window.exportCumulativeRAS = (campaignGroup) => {
       if (!currentUser) return;
       exportTechRAS(campaignGroup, currentUser.email);
     };
 
-    // Función que utiliza directamente la API nativa de Android/iOS para compartir el archivo adjunto
+    // ==========================================================================
+    //  COMPARTIR RAS (menú nativo de Android: eliges Gmail u otra app y ya va adjunto)
+    //
+    //  Clave: navigator.share() solo funciona si se llama justo después del toque
+    //  del usuario. Generar el Excel tarda (fetch de plantilla + ExcelJS), así que
+    //  el archivo se PREPARA ANTES (al abrir Descargas / al cambiar los datos) y al
+    //  pulsar "Compartir Archivo" se llama a share() de inmediato, sin esperas.
+    // ==========================================================================
+    const rasShareCache = {};     // { CNR: { sig, file, blob, fileName, userAlias }, RQNM: {...} }
+    const rasShareBuilding = {};  // promesas en curso para no generar el mismo archivo dos veces
+    const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    // OTs del técnico actual para la campaña (misma lógica que buildTechRASFile)
+    function getUserRASOTs(campaignGroup) {
+      if (!currentUser) return [];
+      const me = currentUser.email.toLowerCase().trim();
+      return workOrders.filter(o => {
+        const belongs = (o.tecnicoId || '').toLowerCase().trim() === me;
+        const c = (o.campaniaId || '').toUpperCase();
+        const matches = campaignGroup === 'CNR' ? (c === 'CNR') : (c === 'AY' || c === 'ALE' || c === 'RQNM');
+        return belongs && matches;
+      });
+    }
+
+    // Firma de los datos: si cambian las OTs, el alias o las visitas, el archivo en caché queda obsoleto
+    function getRASShareSignature(campaignGroup) {
+      const me = (currentUser?.email || '').toLowerCase().trim();
+      const u = usersList.find(x => (x.email || '').toLowerCase().trim() === me);
+      return JSON.stringify([
+        u?.alias || '',
+        getUserRASOTs(campaignGroup).map(o => [o.id, o.nombre, o.recintosTotales, o.historialDiario || []])
+      ]);
+    }
+
+    async function prepareRASShareFile(campaignGroup) {
+      if (!currentUser || !getUserRASOTs(campaignGroup).length) return null;
+
+      const sig = getRASShareSignature(campaignGroup);
+      const cached = rasShareCache[campaignGroup];
+      if (cached && cached.sig === sig) return cached;
+      if (rasShareBuilding[campaignGroup]) return rasShareBuilding[campaignGroup];
+
+      rasShareBuilding[campaignGroup] = (async () => {
+        try {
+          const fileData = await buildTechRASFile(campaignGroup, currentUser.email);
+          if (!fileData) return null;
+          const file = new File([fileData.blob], fileData.fileName, {
+            type: XLSX_MIME,
+            lastModified: Date.now()
+          });
+          const entry = { sig, file, blob: fileData.blob, fileName: fileData.fileName, userAlias: fileData.userAlias };
+          rasShareCache[campaignGroup] = entry;
+          return entry;
+        } catch (err) {
+          console.warn("No se pudo preparar el RAS para compartir:", err.message);
+          return null;
+        } finally {
+          delete rasShareBuilding[campaignGroup];
+        }
+      })();
+
+      return rasShareBuilding[campaignGroup];
+    }
+
+    // Prepara en segundo plano los dos RAS (CNR y RQNM) del técnico
+    function prefetchRASShareFiles() {
+      if (!currentUser) return;
+      ['CNR', 'RQNM'].forEach(g => { prepareRASShareFile(g); });
+    }
+
+    // Registro silencioso (opcional) de la entrega en Firestore, sin bloquear nada
+    function logRASDelivery(campaignGroup, entry) {
+      try {
+        const recipients = campaignGroup === 'CNR'
+          ? (emailConfig.cnrRecipients?.length ? emailConfig.cnrRecipients : ['arojo@geacam.com', 'asotos@geacam.com'])
+          : (emailConfig.rqnmRecipients?.length ? emailConfig.rqnmRecipients : ['arojo@geacam.com', 'sgonzalez@geacam.com']);
+        setDoc(doc(db, "ras_deliveries", `${currentUser.uid}_${campaignGroup}`), {
+          tecnicoEmail: currentUser.email,
+          tecnicoNombre: entry.userAlias,
+          campania: campaignGroup,
+          fileName: entry.fileName,
+          fechaGeneracion: new Date().toISOString(),
+          destinatarios: recipients,
+          asunto: `RAS ${campaignGroup} ${entry.userAlias}`
+        }).catch(err => console.warn("Aviso Firestore:", err));
+      } catch (e) { /* no crítico */ }
+    }
+
     window.shareCumulativeRASNative = async (campaignGroup) => {
       if (!currentUser) {
         alert("Debes iniciar sesión para compartir el parte.");
         return;
       }
 
-      // 1. Obtener destinatarios en memoria sin demoras asíncronas adicionales
-      let recipients = [];
-      if (campaignGroup === 'CNR') {
-        recipients = (emailConfig.cnrRecipients && emailConfig.cnrRecipients.length > 0)
-          ? emailConfig.cnrRecipients 
-          : ['arojo@geacam.com', 'asotos@geacam.com'];
-      } else {
-        recipients = (emailConfig.rqnmRecipients && emailConfig.rqnmRecipients.length > 0)
-          ? emailConfig.rqnmRecipients 
-          : ['arojo@geacam.com', 'sgonzalez@geacam.com'];
+      if (!getUserRASOTs(campaignGroup).length) {
+        alert(`No se encontraron OTs asignadas a tu usuario para la campaña ${campaignGroup}.`);
+        return;
       }
 
+      const canNativeShare = !!(navigator.share && navigator.canShare);
+
+      // CAMINO RÁPIDO: archivo ya preparado y al día -> share() se llama de forma inmediata
+      // (sin ningún await antes), así el navegador lo acepta como acción del usuario.
+      let entry = rasShareCache[campaignGroup];
+      if (entry && entry.sig === getRASShareSignature(campaignGroup) && canNativeShare && navigator.canShare({ files: [entry.file] })) {
+        try {
+          await navigator.share({ files: [entry.file] });
+          logRASDelivery(campaignGroup, entry);
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return; // el usuario cerró el menú
+          console.warn("Fallo en navigator.share:", shareErr.name, shareErr.message);
+          alert("No se pudo abrir el menú de compartir (" + shareErr.name + "). Se descargará el archivo para que lo adjuntes manualmente.");
+          saveAs(entry.blob, entry.fileName);
+          return;
+        }
+      }
+
+      // CAMINO LENTO: el archivo aún no estaba listo (o los datos cambiaron). Se genera ahora.
       try {
-        // 2. Construcción del archivo Excel
-        const fileData = await buildTechRASFile(campaignGroup, currentUser.email);
-        if (!fileData) return;
+        entry = await prepareRASShareFile(campaignGroup);
+        if (!entry) {
+          alert("No se pudo generar el archivo RAS. Inténtalo de nuevo.");
+          return;
+        }
 
-        const { blob, fileName, userAlias } = fileData;
-        const subject = `RAS ${campaignGroup} ${userAlias}`;
-        const body = "Adjunto el Registro de actividades semanal\n\n\nUn saludo";
+        if (!canNativeShare || !navigator.canShare({ files: [entry.file] })) {
+          // Navegador sin soporte (p. ej. escritorio): se descarga el archivo
+          saveAs(entry.blob, entry.fileName);
+          alert("Este navegador no permite compartir archivos directamente. Se ha descargado el Excel: adjúntalo manualmente a tu correo.");
+          return;
+        }
 
-        // Registro silencioso en Firestore sin bloquear la UI
-        const deliveryDocId = `${currentUser.uid}_${campaignGroup}`;
-        setDoc(doc(db, "ras_deliveries", deliveryDocId), {
-          tecnicoEmail: currentUser.email,
-          tecnicoNombre: userAlias,
-          campania: campaignGroup,
-          fileName: fileName,
-          fechaGeneracion: new Date().toISOString(),
-          destinatarios: recipients,
-          asunto: subject
-        }).catch(err => console.warn("Aviso Firestore:", err));
-
-        // 3. Crear el objeto File con el MIME exacto de Excel
-        const file = new File([blob], fileName, {
-          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-          lastModified: Date.now()
-        });
-
-        // 4. Intentar compartir nativamente con Android Sharesheet
-        let sharedSuccessfully = false;
-
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: subject,
-              text: body
-            });
-            sharedSuccessfully = true;
-            return;
-          } catch (shareErr) {
-            // Si el usuario simplemente canceló el menú nativo, no hacemos nada
-            if (shareErr.name === 'AbortError') return;
-            console.warn("Fallo en navigator.share con archivos:", shareErr.message);
+        try {
+          await navigator.share({ files: [entry.file] });
+          logRASDelivery(campaignGroup, entry);
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+          if (shareErr.name === 'NotAllowedError') {
+            // Se perdió el "toque" por la espera. Ahora el archivo ya está en caché: al pulsar otra vez va al instante.
+            alert("✅ Archivo preparado. Pulsa de nuevo «Compartir Archivo» para abrir el menú de compartir.");
+          } else {
+            console.warn("Fallo en navigator.share:", shareErr.name, shareErr.message);
+            saveAs(entry.blob, entry.fileName);
+            alert("No se pudo abrir el menú de compartir. Se ha descargado el archivo para que lo adjuntes manualmente.");
           }
         }
-
-        // 5. Fallback limpio si Android o el visor bloquea los permisos (Permission Denied)
-        if (!sharedSuccessfully) {
-          saveAs(blob, fileName);
-          const mailtoUrl = `mailto:${encodeURIComponent(recipients.join(','))}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-          window.location.href = mailtoUrl;
-        }
-
       } catch (err) {
         if (err.name === 'AbortError') return;
         alert("Aviso: " + err.message);
@@ -2638,6 +2730,9 @@
           ? "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-950/40 text-amber-200 border border-amber-400/30 shadow-xs flex items-center gap-1.5" 
           : "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5";
       }
+
+      // Deja listos en segundo plano los Excel para "Compartir Archivo" (ver bloque COMPARTIR RAS)
+      prefetchRASShareFiles();
     }
 
     window.exportMonthlyReportExcel = async () => {
