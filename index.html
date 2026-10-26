@@ -1979,7 +1979,11 @@
         } catch (shareErr) {
           if (shareErr.name === 'AbortError') return; // el usuario cerró el menú
           console.warn("Fallo en navigator.share:", shareErr.name, shareErr.message);
-          alert("No se pudo abrir el menú de compartir (" + shareErr.name + "). Se descargará el archivo para que lo adjuntes manualmente.");
+          alert("No se pudo abrir el menú de compartir.\nError: " + shareErr.name + " - " + shareErr.message +
+                "\nTamaño: " + entry.file.size + " bytes | Tipo: " + entry.file.type +
+                "\nNombre: " + entry.fileName +
+                "\nEn iframe: " + (window.self !== window.top) +
+                "\n\nSe descargará el archivo para que lo adjuntes manualmente.");
           saveAs(entry.blob, entry.fileName);
           return;
         }
