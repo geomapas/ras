@@ -17,7 +17,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Lucide Icons CDN -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <!-- Librerías para exportar a Excel -->
+  <!-- Librerías para exportar/importar Excel -->
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   
@@ -122,11 +122,13 @@
       <!-- SUB-PESTAÑA 1: CONTROL DE OTS -->
       <div id="tech-subtab-ots" class="max-w-xl mx-auto space-y-4">
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-2.5">
-          <label class="block text-[11px] font-black text-[#222a16] uppercase">Orden de Trabajo (OT)</label>
-          <div class="relative">
-            <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
-            <input type="text" id="ot-search-input" oninput="filterOTOptions()" placeholder="Filtrar por texto..." class="w-full pl-8 pr-3 py-1.5 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          <div class="flex items-center justify-between">
+            <label class="block text-[11px] font-black text-[#222a16] uppercase">Mis Órdenes de Trabajo (OT)</label>
+            <button type="button" onclick="openAddOTModal('tecnico')" class="px-2.5 py-1 bg-white text-[#2e371f] hover:bg-slate-100 rounded-lg text-xs font-black shadow flex items-center gap-1 transition">
+              <i data-lucide="plus" class="w-3.5 h-3.5 text-[#728157]"></i> Añadir Nueva OT
+            </button>
           </div>
+
           <select id="ot-select" onchange="selectOT(this.value)" class="w-full p-2.5 border-0 rounded-xl font-bold text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
             <option value="">-- Carga de OTs en curso... --</option>
           </select>
@@ -134,13 +136,19 @@
 
         <!-- Ficha OT -->
         <div id="ot-card" class="hidden bg-card-filled rounded-2xl shadow-lg p-4 sm:p-5 space-y-4">
-          <div class="flex justify-between items-start border-b border-black/10 pb-3">
-            <div>
-              <h3 id="ot-card-title" class="font-extrabold text-base text-[#1b2210]">OT-000</h3>
+          <div class="flex justify-between items-start border-b border-black/10 pb-3 gap-2">
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2">
+                <h3 id="ot-card-title" class="font-extrabold text-base text-[#1b2210] break-all">OT-000</h3>
+                <!-- Botón para modificar o eliminar la OT por parte del técnico -->
+                <button type="button" onclick="openTechEditOTModal()" class="p-1 text-[#2c371b] hover:text-black bg-white/70 hover:bg-white rounded-lg shadow-xs transition shrink-0" title="Modificar o eliminar esta OT">
+                  <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
               <p id="ot-card-subtitle" class="text-[11px] text-[#2c371b] font-bold">Provincia</p>
               <p id="ot-card-tech" class="text-[11px] text-[#212a14] font-black">Técnico: -</p>
             </div>
-            <span id="ot-card-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#3c4728] shadow">En Progreso</span>
+            <span id="ot-card-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#3c4728] shadow shrink-0">En Progreso</span>
           </div>
 
           <div class="grid grid-cols-3 gap-2.5 text-center">
@@ -161,7 +169,7 @@
           <!-- Formulario Registro OT -->
           <form id="form-daily" class="bg-white/90 p-3.5 rounded-xl shadow space-y-3">
             <h4 class="font-black text-[10px] text-[#283219] uppercase tracking-wider flex items-center gap-1.5">
-              <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#728157]"></i> Registro de Visita OT
+              <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-[#728157]"></i> Registro de Visita de Jornada
             </h4>
             <div class="grid grid-cols-2 gap-2">
               <div>
@@ -169,8 +177,8 @@
                 <input type="date" id="reg-date" required class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white font-medium shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
               </div>
               <div>
-                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Pendientes Restantes</label>
-                <input type="number" id="reg-pending" min="0" required placeholder="0 si finaliza" class="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white text-right shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
+                <label class="block text-[9px] font-bold text-slate-600 uppercase mb-0.5">Recintos Visitados Hoy</label>
+                <input type="number" id="reg-visited" min="1" required placeholder="Ej: 8" class="w-full p-2 border border-slate-200 rounded-lg text-xs font-bold bg-white text-right shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
               </div>
             </div>
             <button type="submit" class="w-full py-2 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">
@@ -200,7 +208,6 @@
           <form id="form-mileage" class="space-y-3.5">
             <input type="hidden" id="km-edit-id" value="">
 
-            <!-- BLOQUE: JORNADA Y ACTIVIDAD -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2.5">
               <div class="grid grid-cols-2 gap-2">
                 <div>
@@ -219,9 +226,10 @@
               <div class="grid grid-cols-2 gap-2">
                 <div>
                   <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-0.5">Actividad</label>
-                  <select id="km-actividad" required class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                  <select id="km-actividad" required onchange="handleActivityChange()" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-bold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
                     <option value="CST-AY">CST-AY</option>
                     <option value="CST-CNR">CST-CNR</option>
+                    <option value="CST-ALE">CST-ALE</option>
                     <option value="CST-VEA">CST-VEA</option>
                     <option value="CST-VEG">CST-VEG</option>
                     <option value="CST RE/TR">CST RE/TR</option>
@@ -230,15 +238,14 @@
                 </div>
                 <div>
                   <div class="flex justify-between items-center mb-0.5">
-                    <label class="block text-[10px] font-black text-[#2e391f] uppercase">Recintos OT</label>
-                    <span class="text-[9px] bg-main-primary text-white font-black px-1.5 py-0.2 rounded shadow-xs">Auto</span>
+                    <label id="km-rendimiento-label" class="block text-[10px] font-black text-[#2e391f] uppercase">Recintos OT</label>
+                    <span id="km-rendimiento-badge" class="text-[9px] bg-main-primary text-white font-black px-1.5 py-0.2 rounded shadow-xs">Auto</span>
                   </div>
                   <input type="number" id="km-rendimiento" min="0" value="0" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black text-slate-800 text-right outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
                 </div>
               </div>
             </div>
 
-            <!-- BLOQUE: HORARIOS -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
               <div class="flex justify-between items-center">
                 <span class="text-[10px] font-black text-[#2e391f] uppercase flex items-center gap-1">
@@ -273,7 +280,6 @@
               </div>
             </div>
 
-            <!-- BLOQUE: RUTA -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-1.5">
               <div class="flex justify-between items-center">
                 <label class="text-[10px] font-black text-[#2e391f] uppercase flex items-center gap-1">
@@ -290,12 +296,11 @@
               <input type="hidden" id="km-ruta-full" value="">
             </div>
 
-            <!-- BLOQUE: VEHÍCULO Y KM -->
             <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-2">
               <div class="grid grid-cols-3 gap-2 items-end">
                 <div>
                   <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Matrícula</label>
-                  <input type="text" id="km-matricula" placeholder="0000-XXX" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
+                  <input type="text" id="km-matricula" onchange="handleKmPlateOrDateChange()" placeholder="0000-XXX" class="w-full p-2 border-0 rounded-lg text-xs bg-white font-black uppercase text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] shadow-sm">
                 </div>
                 <div>
                   <label class="block text-[9px] font-black text-[#2e391f] uppercase mb-0.5">Km Inicio</label>
@@ -313,7 +318,6 @@
               </div>
             </div>
 
-            <!-- BLOQUE: GASTOS Y DIETAS -->
             <div class="bg-white/80 rounded-xl overflow-hidden shadow-sm">
               <button type="button" onclick="toggleSecondaryExpenses()" class="w-full p-2.5 text-left text-xs font-black text-[#2b351d] flex justify-between items-center transition hover:bg-white/90">
                 <span class="flex items-center gap-1.5 text-[11px]">
@@ -371,7 +375,7 @@
                   <th class="p-2.5">Fecha</th>
                   <th class="p-2.5">Tipo / Act.</th>
                   <th class="p-2.5">Ruta</th>
-                  <th class="p-2.5 text-right">Recintos</th>
+                  <th class="p-2.5 text-right">Recintos / Exp.</th>
                   <th class="p-2.5 text-right">Km</th>
                   <th class="p-2.5 text-right">Gastos</th>
                   <th class="p-2.5 text-center">Acciones</th>
@@ -385,8 +389,62 @@
 
       <!-- SUB-PESTAÑA 3: DESCARGAS DE DOCUMENTACIÓN / PARTES -->
       <div id="tech-subtab-down" class="hidden max-w-xl mx-auto space-y-4">
-        
-        <!-- TARJETA 1: Seguimiento Mensual de Actividades (Geacam) -->
+        <!-- TARJETA 1: RAS Acumulativo -->
+        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5 border-2 border-white/60">
+          <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="file-check-2" class="w-5 h-5 text-[#2e371f]"></i> Registro de Actividades Semanal (RAS)
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Seguimiento semanal acumulativo oficial de OTs inspeccionadas</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Acumulativo</span>
+          </div>
+
+          <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
+            <!-- BLOQUE CNR -->
+            <div class="p-3 bg-white/90 rounded-xl border border-black/5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-xs text-[#202714] flex items-center gap-1.5">
+                  <i data-lucide="folder-check" class="w-4 h-4 text-[#43522f]"></i> RAS Campaña CNR
+                </span>
+                <span id="badge-ras-cnr" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="exportCumulativeRAS('CNR')" class="w-full py-2.5 px-2 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i> <span>Descargar (.xlsx)</span>
+                </button>
+                <button type="button" onclick="shareCumulativeRASNative('CNR')" class="w-full py-2.5 px-2 bg-[#5c7040] hover:bg-[#4b5c34] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="share-2" class="w-3.5 h-3.5 shrink-0"></i> <span>Compartir Archivo</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- BLOQUE RQNM -->
+            <div class="p-3 bg-white/90 rounded-xl border border-black/5 space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="font-black text-xs text-[#202714] flex items-center gap-1.5">
+                  <i data-lucide="folder-check" class="w-4 h-4 text-[#526338]"></i> RAS Campaña RQNM
+                </span>
+                <span id="badge-ras-rqnm" class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-slate-400"></span> Comprobando...
+                </span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 pt-1">
+                <button type="button" onclick="exportCumulativeRAS('RQNM')" class="w-full py-2.5 px-2 bg-[#526338] hover:bg-[#43522f] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="download" class="w-3.5 h-3.5 shrink-0"></i> <span>Descargar (.xlsx)</span>
+                </button>
+                <button type="button" onclick="shareCumulativeRASNative('RQNM')" class="w-full py-2.5 px-2 bg-[#647942] hover:bg-[#526338] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5">
+                  <i data-lucide="share-2" class="w-3.5 h-3.5 shrink-0"></i> <span>Compartir Archivo</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TARJETA 2: Seguimiento Mensual de Actividades -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
@@ -395,12 +453,8 @@
               </h3>
               <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Control de técnicos, actividades y costes (GEACAM)</p>
             </div>
-            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Actividades</span>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Mensual</span>
           </div>
-
-          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
-            Genera y descarga la plantilla de actividades cumplimentada con todas las jornadas, rutas, recintos y gastos registrados en el mes seleccionado.
-          </p>
 
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
             <div>
@@ -414,7 +468,7 @@
           </div>
         </div>
 
-        <!-- TARJETA 2: Seguimiento del Vehículo (PE-SGI-04) -->
+        <!-- TARJETA 3: Seguimiento del Vehículo -->
         <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5">
           <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
             <div>
@@ -425,10 +479,6 @@
             </div>
             <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Vehículos</span>
           </div>
-
-          <p class="text-xs text-[#202715] font-medium leading-relaxed bg-white/60 p-2.5 rounded-xl">
-            Genera el parte de control individual por cada vehículo utilizado. Filtra por mes y selecciona la matrícula para exportar su hoja mensual.
-          </p>
 
           <div class="bg-white/80 p-3 rounded-xl shadow-sm space-y-3">
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -449,7 +499,6 @@
             </button>
           </div>
         </div>
-
       </div>
     </section>
 
@@ -457,59 +506,37 @@
     <section id="sec-gestor" class="hidden space-y-4">
       <div class="flex border-b border-slate-300 gap-1 overflow-x-auto text-xs pb-1">
         <button id="tab-btn-ots" onclick="switchGestorSubTab('ots')" class="px-3 py-2 font-bold border-b-2 border-main-primary text-[#242c17] whitespace-nowrap">OTs</button>
-        <button id="tab-btn-plan" onclick="switchGestorSubTab('plan')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Planificaciones</button>
+        <button id="tab-btn-ras" onclick="switchGestorSubTab('ras')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17] flex items-center gap-1.5">
+          <i data-lucide="file-check-2" class="w-3.5 h-3.5"></i> Informes RAS
+        </button>
+        <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17] flex items-center gap-1.5">
+          <i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Estadísticas
+        </button>
+        <button id="tab-btn-import" onclick="switchGestorSubTab('import')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17] flex items-center gap-1">
+          <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i> Importar RAS
+        </button>
         <button id="tab-btn-users" onclick="switchGestorSubTab('users')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Usuarios</button>
-        <button id="tab-btn-rep" onclick="switchGestorSubTab('rep')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]">Estadísticas</button>
+        <button id="tab-btn-settings" onclick="switchGestorSubTab('settings')" class="px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17] flex items-center gap-1">
+          <i data-lucide="settings" class="w-3.5 h-3.5"></i> Ajustes Correo
+        </button>
       </div>
 
       <!-- OTs Gestor -->
       <div id="subtab-ots" class="space-y-4">
-        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3 max-w-xl mx-auto">
-          <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
-            <i data-lucide="file-plus" class="w-4 h-4 text-[#728157]"></i> Generar Nueva OT
-          </h3>
-          <form id="form-ot" class="space-y-2.5">
-            <div>
-              <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Código OT</label>
-              <input type="text" id="ot-code" required placeholder="Ej: OT-ALB-2026-01" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Campaña</label>
-                <select id="ot-camp-sel" required onchange="updateOTRecintosLimitHint()" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]"></select>
-              </div>
-              <div>
-                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Provincia</label>
-                <select id="ot-prov-sel" required onchange="updateOTRecintosLimitHint()" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
-                  <option value="Albacete">Albacete</option>
-                  <option value="Ciudad Real">Ciudad Real</option>
-                  <option value="Cuenca">Cuenca</option>
-                  <option value="Guadalajara">Guadalajara</option>
-                  <option value="Toledo">Toledo</option>
-                </select>
-              </div>
-            </div>
-            <div class="grid grid-cols-2 gap-2">
-              <div>
-                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Técnico</label>
-                <select id="ot-tech-select" required class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]"></select>
-              </div>
-              <div>
-                <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Recintos</label>
-                <input type="number" id="ot-recintos" min="1" required placeholder="Ej: 200" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
-              </div>
-            </div>
-            <div id="ot-recintos-hint" class="text-[11px] bg-white text-[#2a351b] p-2.5 rounded-xl font-bold shadow">
-              Selecciona una campaña para ver disponibilidad.
-            </div>
-            <button type="submit" class="w-full py-2.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition">Generar OT</button>
-          </form>
-        </div>
-
         <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
-          <div class="flex justify-between items-center gap-2 border-b border-black/10 pb-2">
-            <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Listado OTs</h3>
-            <input type="text" id="filter-ot-table" oninput="renderOTTable()" placeholder="Buscar OT..." class="p-1.5 border-0 rounded-lg text-xs bg-white text-slate-800 w-44 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+                <i data-lucide="layers" class="w-4 h-4 text-[#728157]"></i> Listado OTs Regionales
+              </h3>
+              <p class="text-[10px] text-[#2c371b] font-bold">Gestión, alta y asignación a técnicos</p>
+            </div>
+            <div class="flex items-center gap-2 self-end sm:self-auto w-full sm:w-auto">
+              <input type="text" id="filter-ot-table" oninput="renderOTTable()" placeholder="Buscar OT o técnico..." class="flex-1 sm:w-48 p-1.5 border-0 rounded-lg text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+              <button type="button" onclick="openAddOTModal('gestor')" class="px-3 py-1.5 bg-white text-[#252e18] hover:bg-slate-100 rounded-lg text-xs font-black shadow flex items-center gap-1.5 transition whitespace-nowrap">
+                <i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir OT
+              </button>
+            </div>
           </div>
           <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
             <table class="w-full text-xs text-left">
@@ -530,48 +557,153 @@
         </div>
       </div>
 
-      <!-- Planificaciones Gestor -->
-      <div id="subtab-plan" class="hidden space-y-4">
-        <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3 max-w-xl mx-auto">
-          <h3 class="font-black text-xs uppercase tracking-wider text-[#1e2513]">Nueva Planificación Regional</h3>
-          <form id="form-campaign" class="space-y-2.5">
+      <!-- INFORMES RAS GESTOR -->
+      <div id="subtab-ras" class="hidden space-y-4 max-w-4xl mx-auto">
+        <!-- Selector y Cabecera de Semana -->
+        <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/10 pb-3">
             <div>
-              <label class="block text-[10px] font-black text-[#242c17] uppercase mb-0.5">Nombre Campaña</label>
-              <input type="text" id="camp-name" required placeholder="Ej: PAC 2026" class="w-full p-2 border-0 rounded-xl text-xs bg-white text-slate-800 shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="calendar-range" class="w-5 h-5 text-[#2e371f]"></i> Informes Semanales RAS por Técnico
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">
+                Técnicos con actividad registrada en campo y descarga de sus partes acumulativos oficiales
+              </p>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Albacete</span><input type="number" min="0" id="c-alb" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
-              <div><span class="text-[10px] text-[#29321b] uppercase font-black">C. Real</span><input type="number" min="0" id="c-cr" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
-              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Cuenca</span><input type="number" min="0" id="c-cu" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
-              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Guadalajara</span><input type="number" min="0" id="c-gu" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
-              <div><span class="text-[10px] text-[#29321b] uppercase font-black">Toledo</span><input type="number" min="0" id="c-to" value="0" oninput="calcCampTotal()" class="w-full p-1.5 border-0 rounded-lg bg-white text-slate-800 font-bold shadow"></div>
+            <div class="flex items-center gap-2 bg-white/90 p-1.5 rounded-xl shadow-sm self-start sm:self-auto">
+              <label for="gestor-ras-week-input" class="text-[10px] font-black uppercase text-[#2e371f] pl-1">Semana:</label>
+              <input type="date" id="gestor-ras-week-input" onchange="handleGestorWeekChange(this.value)" class="p-1 border-0 rounded-lg text-xs font-bold text-slate-800 outline-none bg-transparent">
+              <button type="button" onclick="resetGestorWeekToPrevious()" class="px-2 py-1 bg-main-primary hover:bg-main-primary-dark text-white rounded-lg text-[10px] font-bold transition shadow-xs">
+                Semana Anterior
+              </button>
             </div>
-            <div class="bg-white p-2.5 rounded-xl text-xs font-black text-[#2e371f] flex justify-between shadow">
-              <span>Total Regional:</span>
-              <span id="camp-total-sum">0 Recintos</span>
-            </div>
-            <button type="submit" class="w-full py-2 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow-md transition">Guardar Planificación</button>
-          </form>
+          </div>
+
+          <div class="flex items-center justify-between text-xs font-bold text-[#273216] px-1">
+            <span id="gestor-ras-week-label" class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-[#3d4b29] animate-pulse"></span> Evaluando: Calculando semana...
+            </span>
+            <span id="gestor-ras-week-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#2c371b] shadow-xs">
+              Semana Anterior
+            </span>
+          </div>
         </div>
 
-        <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
-          <div class="overflow-x-auto bg-white/90 rounded-xl shadow p-2">
-            <table class="w-full text-xs text-left">
-              <thead>
-                <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
-                  <th class="p-2.5">Campaña</th>
-                  <th class="p-2.5 text-right">Alb</th>
-                  <th class="p-2.5 text-right">CR</th>
-                  <th class="p-2.5 text-right">Cu</th>
-                  <th class="p-2.5 text-right">Gu</th>
-                  <th class="p-2.5 text-right">To</th>
-                  <th class="p-2.5 text-right font-black text-[#202715]">Total</th>
-                  <th class="p-2.5 text-center">Acciones</th>
-                </tr>
-              </thead>
-              <tbody id="camp-table-body" class="divide-y divide-slate-100"></tbody>
-            </table>
+        <!-- Bloques en 2 Columnas: CNR y RQNM -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- BLOQUE 1: RAS Campaña CNR -->
+          <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5 border-2 border-white/60 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+                <div>
+                  <h4 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+                    <i data-lucide="folder-check" class="w-4 h-4 text-[#2e371f]"></i> RAS Campaña CNR
+                  </h4>
+                  <p class="text-[10px] text-[#2c371b] font-bold mt-0.5">Control de campo Campaña CNR</p>
+                </div>
+                <span id="count-techs-cnr" class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#43522f] text-white shadow-xs">0 Técnicos</span>
+              </div>
+
+              <!-- Listado de técnicos activos en CNR -->
+              <div id="container-techs-cnr" class="space-y-2">
+                <div class="text-xs bg-white/70 p-3.5 rounded-xl text-center italic text-[#394524] font-medium shadow-xs">
+                  Cargando actividad...
+                </div>
+              </div>
+            </div>
           </div>
+
+          <!-- BLOQUE 2: RAS Campaña RQNM -->
+          <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5 border-2 border-white/60 flex flex-col justify-between">
+            <div class="space-y-3">
+              <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+                <div>
+                  <h4 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+                    <i data-lucide="folder-check" class="w-4 h-4 text-[#2e371f]"></i> RAS Campaña RQNM
+                  </h4>
+                  <p class="text-[10px] text-[#2c371b] font-bold mt-0.5">Campañas AY, ALE y RQNM</p>
+                </div>
+                <span id="count-techs-rqnm" class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-[#526338] text-white shadow-xs">0 Técnicos</span>
+              </div>
+
+              <!-- Listado de técnicos activos en RQNM -->
+              <div id="container-techs-rqnm" class="space-y-2">
+                <div class="text-xs bg-white/70 p-3.5 rounded-xl text-center italic text-[#394524] font-medium shadow-xs">
+                  Cargando actividad...
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PESTAÑA: ESTADÍSTICAS GESTOR -->
+      <div id="subtab-rep" class="hidden space-y-4 max-w-4xl mx-auto">
+        <!-- Selector y Cabecera de Semana para Estadísticas -->
+        <div class="bg-card-filled p-4 rounded-2xl shadow-lg space-y-3">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-black/10 pb-3">
+            <div>
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="bar-chart-3" class="w-5 h-5 text-[#2e371f]"></i> Estadísticas Semanales de Campo
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">
+                Objetos de inspección visitados por provincia según campaña y tipología de OT
+              </p>
+            </div>
+            <div class="flex items-center gap-2 bg-white/90 p-1.5 rounded-xl shadow-sm self-start sm:self-auto">
+              <label for="gestor-stats-week-input" class="text-[10px] font-black uppercase text-[#2e371f] pl-1">Semana:</label>
+              <input type="date" id="gestor-stats-week-input" onchange="handleGestorStatsWeekChange(this.value)" class="p-1 border-0 rounded-lg text-xs font-bold text-slate-800 outline-none bg-transparent">
+              <button type="button" onclick="resetGestorStatsWeekToPrevious()" class="px-2 py-1 bg-main-primary hover:bg-main-primary-dark text-white rounded-lg text-[10px] font-bold transition shadow-xs">
+                Semana Anterior
+              </button>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between text-xs font-bold text-[#273216] px-1">
+            <span id="gestor-stats-week-label" class="flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full bg-[#3d4b29] animate-pulse"></span> Calculando semana...
+            </span>
+            <span id="gestor-stats-week-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#2c371b] shadow-xs">
+              Semana Anterior
+            </span>
+          </div>
+        </div>
+
+        <!-- Contenedor dinámico de bloques estadísticos -->
+        <div id="stats-blocks-container" class="space-y-4"></div>
+      </div>
+
+      <!-- PESTAÑA: IMPORTADOR RAS -->
+      <div id="subtab-import" class="hidden space-y-4 max-w-xl mx-auto">
+        <div class="bg-card-filled p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div>
+            <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+              <i data-lucide="file-up" class="w-5 h-5 text-[#2e371f]"></i> Importar Archivo RAS Existente (.xlsx)
+            </h3>
+            <p class="text-[11px] text-[#2c371b] font-bold mt-1">
+              Sube el archivo Excel oficial completado por un técnico. Se registrarán automáticamente las OTs y todo su histórico semanal acumulado.
+            </p>
+          </div>
+
+          <div class="bg-white/80 p-4 rounded-xl shadow-sm space-y-3">
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Archivo Excel RAS (.xlsx):</label>
+              <input type="file" id="ras-import-file" accept=".xlsx" class="w-full p-2 border border-slate-200 rounded-lg text-xs bg-white text-slate-800">
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">Asignar al Técnico (Opcional si coincide el nombre en D4):</label>
+              <select id="ras-import-tech-override" class="w-full p-2 border-0 rounded-lg text-xs bg-white text-slate-800 shadow-sm font-bold">
+                <option value="">-- Detectar automáticamente por el nombre de celda D4 --</option>
+              </select>
+            </div>
+
+            <button type="button" onclick="processRASImportFile()" class="w-full py-3 bg-[#43522f] hover:bg-[#344024] active:scale-[0.99] text-white font-black text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2">
+              <i data-lucide="check-circle" class="w-4 h-4"></i> Cargar Datos del Excel a la App
+            </button>
+          </div>
+
+          <div id="ras-import-status" class="hidden text-xs bg-white p-3 rounded-xl shadow font-semibold"></div>
         </div>
       </div>
 
@@ -593,33 +725,151 @@
         </div>
       </div>
 
-      <!-- Informes Gestor -->
-      <div id="subtab-rep" class="hidden space-y-3">
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">Totales</span><p id="kpi-tot" class="text-lg font-black text-white">0</p></div>
-          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">Revisados</span><p id="kpi-rev" class="text-lg font-black text-white">0</p></div>
-          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">Pendientes</span><p id="kpi-pen" class="text-lg font-black text-amber-900">0</p></div>
-          <div class="bg-card-filled p-3 rounded-xl shadow"><span class="text-[10px] font-black text-[#2e391f] uppercase">% Avance</span><p id="kpi-pct" class="text-lg font-black text-white">0%</p></div>
-        </div>
-        <div class="bg-card-filled p-4 rounded-2xl shadow-lg overflow-x-auto">
-          <div class="bg-white/90 rounded-xl shadow p-2">
-            <table class="w-full text-xs text-left">
-              <thead>
-                <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
-                  <th class="p-2.5">Provincia</th>
-                  <th class="p-2.5 text-right">Totales</th>
-                  <th class="p-2.5 text-right">Revisados</th>
-                  <th class="p-2.5 text-right">Pendientes</th>
-                  <th class="p-2.5 text-right">%</th>
-                </tr>
-              </thead>
-              <tbody id="cst-table-body" class="divide-y divide-slate-100"></tbody>
-            </table>
+      <!-- PESTAÑA: CONFIGURACIÓN DE DESTINATARIOS DE CORREO -->
+      <div id="subtab-settings" class="hidden space-y-4 max-w-xl mx-auto">
+        <div class="bg-card-filled p-5 rounded-2xl shadow-lg space-y-3.5">
+          <div class="flex items-start justify-between border-b border-black/10 pb-2.5">
+            <div>
+              <h3 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-2">
+                <i data-lucide="shield-check" class="w-5 h-5 text-[#2e371f]"></i> Destinatarios Seguros en Base de Datos
+              </h3>
+              <p class="text-[11px] text-[#2c371b] font-bold mt-1">
+                Los correos no están expuestos en el código fuente. Se guardan y consultan en Firestore en la colección <code>settings/email_config</code>.
+              </p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-white text-[#2e371f] shadow-xs">Seguro</span>
           </div>
+
+          <form id="form-email-settings" class="bg-white/90 p-4 rounded-xl shadow space-y-3">
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">
+                Destinatarios RAS Campaña CNR (separados por coma):
+              </label>
+              <input type="text" id="setting-cnr-recipients" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D]" placeholder="correo1@geacam.com, correo2@geacam.com">
+            </div>
+
+            <div>
+              <label class="block text-[10px] font-black text-[#2e391f] uppercase mb-1">
+                Destinatarios RAS Campaña RQNM (separados por coma):
+              </label>
+              <input type="text" id="setting-rqnm-recipients" class="w-full p-2.5 border border-slate-200 rounded-lg text-xs font-semibold text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D]" placeholder="correo1@geacam.com, correo2@geacam.com">
+            </div>
+
+            <button type="submit" class="w-full py-2.5 bg-main-primary hover:bg-main-primary-dark active:scale-[0.99] text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+              <i data-lucide="save" class="w-4 h-4"></i> Guardar Configuración de Correos
+            </button>
+          </form>
         </div>
       </div>
     </section>
   </main>
+
+  <!-- MODAL DE ASISTENCIA PARA ADJUNTAR EN NAVEGADOR DE ESCRITORIO -->
+  <div id="modal-send-email-preview" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-md w-full p-5 space-y-4 shadow-2xl text-[#1e2513]">
+      <div class="flex justify-between items-start border-b border-black/10 pb-2.5">
+        <div>
+          <h3 id="modal-send-title" class="font-black text-sm uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="send" class="w-5 h-5 text-[#2e371f]"></i> Preparar Envío del RAS
+          </h3>
+          <p class="text-[11px] text-[#2c371b] font-bold mt-0.5">Revisa los datos antes de abrir tu aplicación de correo</p>
+        </div>
+        <button onclick="closeSendEmailModal()" class="text-[#2b351d] hover:text-black p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <div class="bg-white/90 p-4 rounded-xl shadow space-y-3 text-xs">
+        <div>
+          <label class="block text-[10px] font-black uppercase text-slate-600 mb-0.5">Destinatarios:</label>
+          <div id="send-email-to" class="p-2 bg-slate-100 rounded-lg font-bold text-slate-800 break-all select-all"></div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-black uppercase text-slate-600 mb-0.5">Asunto:</label>
+          <div id="send-email-subject" class="p-2 bg-slate-100 rounded-lg font-bold text-[#2e371f] select-all"></div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-black uppercase text-slate-600 mb-0.5">Cuerpo del Correo:</label>
+          <textarea id="send-email-body" rows="4" class="w-full p-2 border border-slate-200 rounded-lg font-medium text-slate-800 outline-none focus:ring-2 focus:ring-[#89986D] bg-white"></textarea>
+        </div>
+
+        <div class="p-2.5 bg-emerald-50 border border-emerald-200 rounded-lg flex items-center gap-2 text-emerald-900 text-[11px]">
+          <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-700 shrink-0"></i>
+          <span class="truncate">Archivo generado: <strong id="send-email-filename" class="font-black">archivo.xlsx</strong></span>
+        </div>
+      </div>
+
+      <div class="flex gap-2 pt-1 border-t border-black/10">
+        <button type="button" onclick="closeSendEmailModal()" class="flex-1 py-2.5 bg-white text-[#2a331c] hover:bg-slate-100 font-black text-xs rounded-xl shadow transition">
+          Cancelar
+        </button>
+        <button type="button" onclick="triggerEmailClientLaunch()" class="flex-1 py-2.5 bg-main-primary hover:bg-main-primary-dark active:scale-[0.99] text-white font-black text-xs rounded-xl shadow transition flex items-center justify-center gap-1.5">
+          <i data-lucide="external-link" class="w-4 h-4"></i> Abrir en Correo
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PARA AÑADIR NUEVA OT (TÉCNICO Y GESTOR CON DETECCIÓN INTELIGENTE) -->
+  <div id="modal-add-ot" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl">
+      <div class="flex justify-between items-center border-b border-black/10 pb-2">
+        <h3 id="modal-add-ot-title" class="font-black text-xs uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+          <i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir Orden de Trabajo
+        </h3>
+        <button onclick="closeAddOTModal()" class="text-[#2b351d] hover:text-black p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <form id="form-tech-add-ot" class="space-y-3">
+        <!-- Campo selector de técnico (visible solo cuando se abre como gestor) -->
+        <div id="box-add-ot-tech-select" class="hidden bg-white/80 p-2.5 rounded-xl shadow-xs">
+          <label class="block text-[10px] font-black text-[#263018] uppercase mb-1 flex items-center gap-1">
+            <i data-lucide="user-check" class="w-3.5 h-3.5 text-[#728157]"></i> Asignar al Técnico
+          </label>
+          <select id="add-ot-assigned-tech" class="w-full p-2 border-0 rounded-lg text-xs bg-white text-slate-800 font-bold shadow-sm outline-none focus:ring-2 focus:ring-[#89986D]">
+            <option value="">-- Selecciona el técnico responsable --</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-[10px] font-black text-[#263018] uppercase mb-1">Código de la OT</label>
+          <input type="text" id="tech-ot-code-input" required oninput="previewParsedOT(this.value)" placeholder="Ej: OT_CNR_2026_MB_ZONA_PORZUNA_CR_49" class="w-full p-2.5 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          <p class="text-[9px] text-[#242c17] mt-1 font-semibold leading-tight">
+            Formato: <strong>OT_[Campaña]_[...Desc...]_[Provincia]_[Recintos]</strong><br>
+            Campaña: <em>CNR, AY, ALE</em> | Prov: <em>AB, CR, CU, GU, TO</em>
+          </p>
+        </div>
+
+        <!-- Tarjeta de Detección Automática Instantánea -->
+        <div id="ot-preview-card" class="hidden bg-white/90 p-3 rounded-xl shadow-sm border border-black/5 space-y-2">
+          <span class="text-[9px] font-black uppercase tracking-wider text-[#344122] flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3 text-[#728157]"></i> Detección Automática de Parámetros:
+          </span>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Campaña / RAS</span>
+              <strong id="preview-camp" class="text-[#2b351d] text-xs font-black">-</strong>
+            </div>
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Provincia</span>
+              <strong id="preview-prov" class="text-slate-800 text-xs font-black">-</strong>
+            </div>
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Nº Recintos</span>
+              <strong id="preview-rec" class="text-[#2b351d] text-xs font-black">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <div id="tech-ot-error" class="hidden text-[11px] font-bold text-red-700 bg-white p-2.5 rounded-xl shadow border border-red-200"></div>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-black/10">
+          <button type="button" onclick="closeAddOTModal()" class="px-3 py-1.5 bg-white text-[#2a331c] font-bold text-xs rounded-xl shadow hover:bg-slate-100 transition">Cancelar</button>
+          <button type="submit" id="btn-submit-add-ot" class="px-4 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Añadir OT</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <!-- MODAL DE REDACCIÓN DE RUTA -->
   <div id="modal-route" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-3">
@@ -643,7 +893,7 @@
     </div>
   </div>
 
-  <!-- MODAL PARA EDICIÓN DE OT -->
+  <!-- MODAL PARA EDICIÓN DE OT (GESTOR) -->
   <div id="modal-edit-ot" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-3">
     <div class="bg-card-filled rounded-2xl max-w-sm w-full p-4 space-y-3 shadow-2xl">
       <div class="flex justify-between items-center border-b border-black/10 pb-2">
@@ -673,6 +923,62 @@
         <div class="flex justify-end gap-2 pt-2 border-t border-black/10">
           <button type="button" onclick="closeEditOTModal()" class="px-3 py-1.5 bg-white text-[#2a331c] font-bold text-xs rounded-xl shadow hover:bg-slate-100 transition">Cancelar</button>
           <button type="submit" class="px-3 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL PARA MODIFICAR Y ELIMINAR OT (TÉCNICO) -->
+  <div id="modal-tech-edit-ot" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-3">
+    <div class="bg-card-filled rounded-2xl max-w-md w-full p-4 sm:p-5 space-y-3.5 shadow-2xl text-[#1e2513]">
+      <div class="flex justify-between items-center border-b border-black/10 pb-2">
+        <h3 class="font-black text-xs uppercase tracking-wider flex items-center gap-1.5">
+          <i data-lucide="edit-3" class="w-4 h-4 text-[#728157]"></i> Modificar o Eliminar OT
+        </h3>
+        <button onclick="closeTechEditOTModal()" class="text-[#2b351d] hover:text-black p-1"><i data-lucide="x" class="w-4 h-4"></i></button>
+      </div>
+
+      <form id="form-tech-edit-ot" class="space-y-3">
+        <input type="hidden" id="tech-edit-ot-id">
+        <div>
+          <label class="block text-[10px] font-black text-[#263018] uppercase mb-1">Código de la OT</label>
+          <input type="text" id="tech-edit-ot-code-input" required oninput="previewParsedTechEditOT(this.value)" class="w-full p-2.5 border-0 rounded-xl text-xs bg-white text-slate-800 font-bold shadow outline-none focus:ring-2 focus:ring-[#89986D]">
+          <p class="text-[9px] text-[#242c17] mt-1 font-semibold leading-tight">
+            Formato: <strong>OT_[Campaña]_[...Desc...]_[Provincia]_[Recintos]</strong>
+          </p>
+        </div>
+
+        <!-- Tarjeta de Detección Dinámica -->
+        <div id="tech-edit-preview-card" class="bg-white/90 p-3 rounded-xl shadow-sm border border-black/5 space-y-2">
+          <span class="text-[9px] font-black uppercase tracking-wider text-[#344122] flex items-center gap-1">
+            <i data-lucide="sparkles" class="w-3 h-3 text-[#728157]"></i> Detección Automática:
+          </span>
+          <div class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Campaña</span>
+              <strong id="tech-edit-preview-camp" class="text-[#2b351d] text-xs font-black">-</strong>
+            </div>
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Provincia</span>
+              <strong id="tech-edit-preview-prov" class="text-slate-800 text-xs font-black">-</strong>
+            </div>
+            <div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200">
+              <span class="block text-[8px] font-black text-slate-500 uppercase">Recintos</span>
+              <strong id="tech-edit-preview-rec" class="text-[#2b351d] text-xs font-black">-</strong>
+            </div>
+          </div>
+        </div>
+
+        <div id="tech-edit-ot-error" class="hidden text-[11px] font-bold text-red-700 bg-white p-2.5 rounded-xl shadow border border-red-200"></div>
+
+        <div class="flex items-center justify-between pt-2 border-t border-black/10">
+          <button type="button" onclick="deleteCurrentTechOT()" class="px-3 py-1.5 bg-rose-700 hover:bg-rose-800 text-white font-black text-xs rounded-xl shadow flex items-center gap-1 transition">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Eliminar OT
+          </button>
+          <div class="flex gap-2">
+            <button type="button" onclick="closeTechEditOTModal()" class="px-3 py-1.5 bg-white text-[#2a331c] font-bold text-xs rounded-xl shadow hover:bg-slate-100 transition">Cancelar</button>
+            <button type="submit" class="px-4 py-1.5 bg-main-primary hover:bg-main-primary-dark text-white font-bold text-xs rounded-xl shadow transition">Guardar Cambios</button>
+          </div>
         </div>
       </form>
     </div>
@@ -709,6 +1015,15 @@
     let usersList = [];
     let currentOT = null;
     let mileageLogs = [];
+    let gestorSelectedMonday = null; // Lunes de la semana para Informes RAS
+    let gestorStatsSelectedMonday = null; // Lunes de la semana para Estadísticas
+    let currentAddOTOrigin = 'tecnico'; // 'tecnico' o 'gestor'
+
+    // Destinatarios configurables leídos desde Firestore (sin estar expuestos fijos en código)
+    let emailConfig = {
+      cnrRecipients: [],
+      rqnmRecipients: []
+    };
 
     const MESES_TEXTO = [
       'ENERO', 'FEBRERO', 'MARZO', 'ABRIL', 'MAYO', 'JUNIO',
@@ -718,6 +1033,14 @@
       'ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN',
       'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'
     ];
+
+    const PROV_MAP = {
+      'AB': 'Albacete',
+      'CR': 'Ciudad Real',
+      'CU': 'Cuenca',
+      'GU': 'Guadalajara',
+      'TO': 'Toledo'
+    };
 
     window.addEventListener('DOMContentLoaded', () => {
       lucide.createIcons();
@@ -730,8 +1053,123 @@
       document.getElementById('excel-export-month').value = curMonth;
       document.getElementById('vehicle-export-month').value = curMonth;
 
+      initGestorPreviousWeek();
+      initGestorStatsPreviousWeek();
+      handleActivityChange();
       registerSW();
     });
+
+    // --- CÁLCULO DE SEMANAS PARA EL GESTOR ---
+    function getPreviousWeekMonday(baseDate = new Date()) {
+      const d = new Date(baseDate);
+      const day = d.getDay(); // 0: Dom, 1: Lun, ..., 6: Sab
+      const diffToMonday = (day === 0 ? -6 : 1) - day;
+      const currentMonday = new Date(d);
+      currentMonday.setDate(d.getDate() + diffToMonday);
+      
+      const prevMonday = new Date(currentMonday);
+      prevMonday.setDate(currentMonday.getDate() - 7);
+      return prevMonday.toISOString().split('T')[0];
+    }
+
+    function initGestorPreviousWeek() {
+      const prevMon = getPreviousWeekMonday();
+      gestorSelectedMonday = prevMon;
+      const input = document.getElementById('gestor-ras-week-input');
+      if (input) input.value = prevMon;
+      updateGestorWeekLabel();
+    }
+
+    function initGestorStatsPreviousWeek() {
+      const prevMon = getPreviousWeekMonday();
+      gestorStatsSelectedMonday = prevMon;
+      const input = document.getElementById('gestor-stats-week-input');
+      if (input) input.value = prevMon;
+      updateGestorStatsWeekLabel();
+    }
+
+    window.resetGestorWeekToPrevious = () => {
+      initGestorPreviousWeek();
+      renderGestorRASReports();
+    };
+
+    window.handleGestorWeekChange = (selectedDateStr) => {
+      if (!selectedDateStr) return;
+      const d = new Date(selectedDateStr + 'T12:00:00');
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1) - day;
+      d.setDate(d.getDate() + diff);
+      gestorSelectedMonday = d.toISOString().split('T')[0];
+      updateGestorWeekLabel();
+      renderGestorRASReports();
+    };
+
+    function updateGestorWeekLabel() {
+      if (!gestorSelectedMonday) return;
+      const mon = new Date(gestorSelectedMonday + 'T12:00:00');
+      const fri = new Date(mon);
+      fri.setDate(mon.getDate() + 4);
+
+      const fmt = (d) => {
+        const dia = d.getDate() < 10 ? `0${d.getDate()}` : `${d.getDate()}`;
+        const mes = (d.getMonth() + 1) < 10 ? `0${d.getMonth() + 1}` : `${d.getMonth() + 1}`;
+        return `${dia}/${mes}/${d.getFullYear()}`;
+      };
+
+      const lbl = document.getElementById('gestor-ras-week-label');
+      const badge = document.getElementById('gestor-ras-week-badge');
+
+      if (lbl) {
+        lbl.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#3d4b29]"></span> Semana: <strong>${fmt(mon)}</strong> al <strong>${fmt(fri)}</strong> (laborables)`;
+      }
+
+      const defaultPrev = getPreviousWeekMonday();
+      if (badge) {
+        badge.innerText = (gestorSelectedMonday === defaultPrev) ? 'Semana Anterior' : 'Semana Seleccionada';
+      }
+    }
+
+    // --- MANEJO DE SEMANAS EN ESTADÍSTICAS ---
+    window.resetGestorStatsWeekToPrevious = () => {
+      initGestorStatsPreviousWeek();
+      renderGestorStatistics();
+    };
+
+    window.handleGestorStatsWeekChange = (selectedDateStr) => {
+      if (!selectedDateStr) return;
+      const d = new Date(selectedDateStr + 'T12:00:00');
+      const day = d.getDay();
+      const diff = (day === 0 ? -6 : 1) - day;
+      d.setDate(d.getDate() + diff);
+      gestorStatsSelectedMonday = d.toISOString().split('T')[0];
+      updateGestorStatsWeekLabel();
+      renderGestorStatistics();
+    };
+
+    function updateGestorStatsWeekLabel() {
+      if (!gestorStatsSelectedMonday) return;
+      const mon = new Date(gestorStatsSelectedMonday + 'T12:00:00');
+      const fri = new Date(mon);
+      fri.setDate(mon.getDate() + 4);
+
+      const fmt = (d) => {
+        const dia = d.getDate() < 10 ? `0${d.getDate()}` : `${d.getDate()}`;
+        const mes = (d.getMonth() + 1) < 10 ? `0${d.getMonth() + 1}` : `${d.getMonth() + 1}`;
+        return `${dia}/${mes}/${d.getFullYear()}`;
+      };
+
+      const lbl = document.getElementById('gestor-stats-week-label');
+      const badge = document.getElementById('gestor-stats-week-badge');
+
+      if (lbl) {
+        lbl.innerHTML = `<span class="w-2 h-2 rounded-full bg-[#3d4b29]"></span> Semana: <strong>${fmt(mon)}</strong> al <strong>${fmt(fri)}</strong> (laborables)`;
+      }
+
+      const defaultPrev = getPreviousWeekMonday();
+      if (badge) {
+        badge.innerText = (gestorStatsSelectedMonday === defaultPrev) ? 'Semana Anterior' : 'Semana Seleccionada';
+      }
+    }
 
     function registerSW() {
       if ('serviceWorker' in navigator) {
@@ -809,42 +1247,114 @@
     window.handleLogout = () => signOut(auth);
 
     function listenToFirestoreData() {
+      // 1. Escuchar usuarios
       onSnapshot(collection(db, "users"), (snapshot) => {
         usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const curU = usersList.find(u => u.email === currentUser?.email);
-        const nameToShow = curU?.alias || currentUser?.email || 'Usuario';
-        document.getElementById('user-display-email').innerText = `${nameToShow} (${currentUser?.email})`;
+        const curU = usersList.find(u => u.email?.toLowerCase().trim() === currentUser?.email?.toLowerCase().trim());
+        const nameToShow = curU?.alias || currentUser?.email?.split('@')[0] || 'Usuario';
+        const displayEl = document.getElementById('user-display-email');
+        if (displayEl) {
+          displayEl.innerText = `${nameToShow} (${currentUser?.email})`;
+        }
         populateTechSelects();
         renderUsersTable();
+      }, (err) => {
+        console.warn("Aviso al consultar users:", err.message);
       });
 
+      // 2. Escuchar la configuración segura de destinatarios de correo desde Firestore
+      onSnapshot(doc(db, "settings", "email_config"), (docSnap) => {
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+          emailConfig.cnrRecipients = Array.isArray(data.cnrRecipients) ? data.cnrRecipients : [];
+          emailConfig.rqnmRecipients = Array.isArray(data.rqnmRecipients) ? data.rqnmRecipients : [];
+        } else {
+          // Inicialización por defecto en base de datos si no existe
+          emailConfig.cnrRecipients = ['arojo@geacam.com', 'asotos@geacam.com'];
+          emailConfig.rqnmRecipients = ['arojo@geacam.com', 'sgonzalez@geacam.com'];
+          setDoc(doc(db, "settings", "email_config"), emailConfig).catch(console.error);
+        }
+        populateEmailSettingsInputs();
+      }, (err) => {
+        console.warn("Aviso al consultar email_config de Firestore:", err.message);
+      });
+
+      // 3. Escuchar Órdenes de Trabajo (OTs)
       onSnapshot(collection(db, "work_orders"), (snapshot) => {
         workOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        if (userRole === 'tecnico' || !document.getElementById('sec-tecnico').classList.contains('hidden')) {
-          renderOTSelect();
-        }
+        
+        renderOTSelect();
+
         if (userRole === 'gestor') {
           renderOTTable();
-          renderGestorReports();
+          renderGestorRASReports();
+          renderGestorStatistics();
         }
-        if (currentOT) selectOT(currentOT.id);
-        autoFillRecintosForDate();
+        
+        if (currentOT) {
+          const refreshed = workOrders.find(o => o.id === currentOT.id && o.tecnicoId === currentUser.email);
+          if (refreshed) {
+            selectOT(refreshed.id);
+          } else {
+            selectOT('');
+          }
+        }
+
+        handleActivityChange();
+        updateRASBadges();
+      }, (err) => {
+        console.warn("Aviso al consultar work_orders:", err.message);
       });
 
+      // 4. Escuchar Campañas
       onSnapshot(collection(db, "campaigns"), (snapshot) => {
         campaigns = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        const sel = document.getElementById('ot-camp-sel');
-        sel.innerHTML = '<option value="">-- Campaña --</option>' + campaigns.map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
-        if (userRole === 'gestor') renderCampTable();
+      }, (err) => {
+        console.warn("Aviso al consultar campaigns:", err.message);
       });
 
+      // 5. Escuchar Kilometraje y Jornadas
       onSnapshot(collection(db, "mileage_logs"), (snapshot) => {
         mileageLogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         renderMileageLogs();
         prefillMileageDefaults();
         updateVehiclePlatesOptions();
+      }, (err) => {
+        console.warn("Aviso al consultar mileage_logs:", err.message);
       });
     }
+
+    function populateEmailSettingsInputs() {
+      const cnrInput = document.getElementById('setting-cnr-recipients');
+      const rqnmInput = document.getElementById('setting-rqnm-recipients');
+      if (cnrInput && emailConfig.cnrRecipients) {
+        cnrInput.value = emailConfig.cnrRecipients.join(', ');
+      }
+      if (rqnmInput && emailConfig.rqnmRecipients) {
+        rqnmInput.value = emailConfig.rqnmRecipients.join(', ');
+      }
+    }
+
+    // Guardado de configuración de correos por parte del Gestor
+    document.getElementById('form-email-settings')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const cnrRaw = document.getElementById('setting-cnr-recipients').value;
+      const rqnmRaw = document.getElementById('setting-rqnm-recipients').value;
+
+      const cnrList = cnrRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      const rqnmList = rqnmRaw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+
+      try {
+        await setDoc(doc(db, "settings", "email_config"), {
+          cnrRecipients: cnrList,
+          rqnmRecipients: rqnmList,
+          updatedAt: new Date().toISOString()
+        });
+        alert("✅ Destinatarios guardados correctamente en Firestore.");
+      } catch (err) {
+        alert("❌ Error al guardar destinatarios: " + err.message);
+      }
+    });
 
     function getUserDisplayName(email) {
       if (!email) return 'Sin Asignar';
@@ -853,11 +1363,17 @@
     }
 
     function populateTechSelects() {
-      const techSelect = document.getElementById('ot-tech-select');
       const editTechSelect = document.getElementById('edit-ot-tech');
+      const importTechSelect = document.getElementById('ras-import-tech-override');
+      const addOtAssignedTechSelect = document.getElementById('add-ot-assigned-tech');
+
       const options = usersList.map(u => `<option value="${u.email}">${u.alias ? u.alias + ' - ' + u.email : u.email}</option>`).join('');
-      if (techSelect) techSelect.innerHTML = '<option value="">-- Seleccionar Técnico --</option>' + options;
+      
       if (editTechSelect) editTechSelect.innerHTML = options;
+      if (importTechSelect) importTechSelect.innerHTML = '<option value="">-- Detectar automáticamente por celda D4 --</option>' + options;
+      if (addOtAssignedTechSelect) {
+        addOtAssignedTechSelect.innerHTML = '<option value="">-- Selecciona el técnico responsable --</option>' + options;
+      }
     }
 
     window.switchRoleView = (role) => {
@@ -902,10 +1418,963 @@
         prefillMileageDefaults();
       } else if (subtab === 'down') {
         updateVehiclePlatesOptions();
+        updateRASBadges();
       }
     };
 
-    // --- LÓGICA DE KILOMETRAJE ---
+    function renderGestorRASReports() {
+      if (!gestorSelectedMonday) return;
+
+      const mondayDate = new Date(gestorSelectedMonday + 'T12:00:00');
+      const weekDates = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(mondayDate);
+        d.setDate(mondayDate.getDate() + i);
+        weekDates.push(d.toISOString().split('T')[0]);
+      }
+
+      const cnrActiveMap = new Map();
+      const rqnmActiveMap = new Map();
+
+      workOrders.forEach(ot => {
+        const camp = (ot.campaniaId || '').toUpperCase();
+        const isCNR = camp === 'CNR';
+        const isRQNM = ['AY', 'ALE', 'RQNM'].includes(camp);
+
+        if (!isCNR && !isRQNM) return;
+
+        const hist = ot.historialDiario || [];
+        let visitedThisWeekInOT = 0;
+
+        weekDates.forEach(dateStr => {
+          const match = hist.find(h => h.fecha === dateStr);
+          if (match && match.recintosHoy > 0) {
+            visitedThisWeekInOT += Number(match.recintosHoy);
+          }
+        });
+
+        if (visitedThisWeekInOT > 0) {
+          const targetMap = isCNR ? cnrActiveMap : rqnmActiveMap;
+          const techEmail = ot.tecnicoId || 'desconocido';
+
+          if (!targetMap.has(techEmail)) {
+            const u = usersList.find(x => x.email.toLowerCase().trim() === techEmail.toLowerCase().trim());
+            const techName = u?.alias || techEmail.split('@')[0];
+            targetMap.set(techEmail, {
+              email: techEmail,
+              name: techName,
+              recintosWeek: 0,
+              otSet: new Set()
+            });
+          }
+
+          const entry = targetMap.get(techEmail);
+          entry.recintosWeek += visitedThisWeekInOT;
+          entry.otSet.add(ot.nombre);
+        }
+      });
+
+      renderCampaignBlock('cnr', Array.from(cnrActiveMap.values()), 'CNR');
+      renderCampaignBlock('rqnm', Array.from(rqnmActiveMap.values()), 'RQNM');
+      lucide.createIcons();
+    }
+
+    function renderCampaignBlock(type, techList, campGroup) {
+      const container = document.getElementById(`container-techs-${type}`);
+      const countBadge = document.getElementById(`count-techs-${type}`);
+      if (!container || !countBadge) return;
+
+      countBadge.innerText = `${techList.length} ${techList.length === 1 ? 'Técnico' : 'Técnicos'}`;
+
+      if (!techList.length) {
+        container.innerHTML = `
+          <div class="bg-white/80 p-4 rounded-xl text-center space-y-1 shadow-xs border border-black/5">
+            <i data-lucide="calendar-x" class="w-6 h-6 text-slate-400 mx-auto"></i>
+            <p class="text-xs font-bold text-slate-700">Sin actividad registrada en esta semana</p>
+            <p class="text-[10px] text-slate-500 font-medium">Ningún técnico reportó recintos visitados en la Campaña ${campGroup}.</p>
+          </div>
+        `;
+        return;
+      }
+
+      techList.sort((a, b) => a.name.localeCompare(b.name));
+
+      container.innerHTML = techList.map(tech => `
+        <div class="bg-white p-3 rounded-xl shadow space-y-2 border border-black/5">
+          <div class="flex items-start justify-between">
+            <div>
+              <h5 class="font-black text-xs text-[#202714] flex items-center gap-1.5">
+                <i data-lucide="user" class="w-3.5 h-3.5 text-[#728157]"></i> ${tech.name}
+              </h5>
+              <p class="text-[10px] text-slate-500 font-semibold truncate max-w-[200px] sm:max-w-xs">${tech.email}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase bg-[#e9eee0] text-[#334020]">
+              ${tech.recintosWeek} recintos
+            </span>
+          </div>
+
+          <div class="flex items-center justify-between text-[11px] pt-1.5 border-t border-slate-100">
+            <span class="text-slate-600 font-bold">
+              ${tech.otSet.size} ${tech.otSet.size === 1 ? 'OT inspeccionada' : 'OTs inspeccionadas'}
+            </span>
+            <button type="button" onclick="exportTechRAS('${campGroup}', '${tech.email}')" class="px-3 py-1.5 bg-main-primary hover:bg-main-primary-dark active:scale-[0.98] text-white font-bold text-xs rounded-lg shadow-sm flex items-center gap-1.5 transition">
+              <i data-lucide="download" class="w-3.5 h-3.5"></i> Descargar RAS (.xlsx)
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderGestorStatistics() {
+      const container = document.getElementById('stats-blocks-container');
+      if (!container) return;
+
+      if (!gestorStatsSelectedMonday) {
+        container.innerHTML = `
+          <div class="bg-card-filled p-6 rounded-2xl shadow-lg text-center text-white">
+            <p class="text-xs font-bold">Selecciona una semana para ver las estadísticas.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const mondayDate = new Date(gestorStatsSelectedMonday + 'T12:00:00');
+      const weekDates = [];
+      for (let i = 0; i < 6; i++) {
+        const d = new Date(mondayDate);
+        d.setDate(mondayDate.getDate() + i);
+        weekDates.push(d.toISOString().split('T')[0]);
+      }
+
+      const PROVINCIAS = ['Albacete', 'Ciudad Real', 'Cuenca', 'Guadalajara', 'Toledo'];
+
+      const blocksConfig = [
+        {
+          id: 'rqnm_feader',
+          title: 'RQNM Feader',
+          subtitle: 'Objetos de inspección Campaña AY (excepto OTs AAII)',
+          badgeColor: 'bg-[#526338]',
+          filter: (ot) => {
+            const camp = (ot.campaniaId || '').toUpperCase();
+            const name = (ot.nombre || '').toUpperCase();
+            return camp === 'AY' && !name.includes('AAII');
+          }
+        },
+        {
+          id: 'rqnm_feaga',
+          title: 'RQNM Feaga (AAII)',
+          subtitle: 'Objetos de inspección Campaña AY en OTs con texto AAII',
+          badgeColor: 'bg-[#647942]',
+          filter: (ot) => {
+            const camp = (ot.campaniaId || '').toUpperCase();
+            const name = (ot.nombre || '').toUpperCase();
+            return camp === 'AY' && name.includes('AAII');
+          }
+        },
+        {
+          id: 'cnr_mbase',
+          title: 'CNR MBASE',
+          subtitle: 'Objetos de inspección Campaña CNR (excepto OTs OOCC)',
+          badgeColor: 'bg-[#43522f]',
+          filter: (ot) => {
+            const camp = (ot.campaniaId || '').toUpperCase();
+            const name = (ot.nombre || '').toUpperCase();
+            return camp === 'CNR' && !name.includes('OOCC');
+          }
+        },
+        {
+          id: 'cnr_oocc',
+          title: 'CNR OOCC',
+          subtitle: 'Objetos de inspección Campaña CNR en OTs con texto OOCC',
+          badgeColor: 'bg-[#313c22]',
+          filter: (ot) => {
+            const camp = (ot.campaniaId || '').toUpperCase();
+            const name = (ot.nombre || '').toUpperCase();
+            return camp === 'CNR' && name.includes('OOCC');
+          }
+        }
+      ];
+
+      const renderedBlocksHTML = [];
+
+      blocksConfig.forEach(block => {
+        const provCounts = {
+          'Albacete': 0,
+          'Ciudad Real': 0,
+          'Cuenca': 0,
+          'Guadalajara': 0,
+          'Toledo': 0
+        };
+
+        let blockTotal = 0;
+        let otsInvolvedCount = 0;
+
+        workOrders.forEach(ot => {
+          if (!block.filter(ot)) return;
+
+          const hist = ot.historialDiario || [];
+          let visitedInOTThisWeek = 0;
+
+          weekDates.forEach(dateStr => {
+            const match = hist.find(h => h.fecha === dateStr);
+            if (match && match.recintosHoy > 0) {
+              visitedInOTThisWeek += Number(match.recintosHoy);
+            }
+          });
+
+          if (visitedInOTThisWeek > 0) {
+            otsInvolvedCount++;
+            blockTotal += visitedInOTThisWeek;
+            const prov = ot.provincia || 'Ciudad Real';
+            if (provCounts[prov] !== undefined) {
+              provCounts[prov] += visitedInOTThisWeek;
+            } else {
+              provCounts['Ciudad Real'] += visitedInOTThisWeek;
+            }
+          }
+        });
+
+        if (blockTotal > 0) {
+          renderedBlocksHTML.push(`
+            <div class="bg-card-filled p-4 sm:p-5 rounded-2xl shadow-lg space-y-3.5 border-2 border-white/60">
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/10 pb-2.5">
+                <div>
+                  <h4 class="font-black text-sm uppercase tracking-wider text-[#1e2513] flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-4 h-4 text-[#2e371f]"></i> ${block.title}
+                  </h4>
+                  <p class="text-[10px] text-[#2c371b] font-bold mt-0.5">${block.subtitle}</p>
+                </div>
+                <div class="flex items-center gap-2 self-start sm:self-auto">
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#252f16] shadow-xs">
+                    ${otsInvolvedCount} ${otsInvolvedCount === 1 ? 'OT Activa' : 'OTs Activas'}
+                  </span>
+                  <span class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase ${block.badgeColor} text-white shadow-xs">
+                    ${blockTotal} Objetos Inspeccionados
+                  </span>
+                </div>
+              </div>
+
+              <!-- Tabla de Objetos de Inspección por Provincia -->
+              <div class="overflow-x-auto bg-white/95 rounded-xl shadow p-2">
+                <table class="w-full text-xs text-left">
+                  <thead>
+                    <tr class="bg-[#d2daba] text-[#2c371b] font-bold uppercase border-b border-black/5 text-[10px]">
+                      <th class="p-2.5">Provincia</th>
+                      <th class="p-2.5 text-right">Objetos de Inspección Visitados</th>
+                      <th class="p-2.5 text-right font-black text-[#202715]">% sobre el Bloque</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-100">
+                    ${PROVINCIAS.map(prov => {
+                      const count = provCounts[prov] || 0;
+                      const pct = blockTotal > 0 ? ((count / blockTotal) * 100).toFixed(1) : '0.0';
+                      return `
+                        <tr class="hover:bg-slate-50 transition-colors">
+                          <td class="p-2.5 font-bold text-slate-800">${prov}</td>
+                          <td class="p-2.5 text-right font-black ${count > 0 ? 'text-[#2a351a]' : 'text-slate-400'}">
+                            ${count}
+                          </td>
+                          <td class="p-2.5 text-right font-bold text-slate-600">
+                            ${count > 0 ? `${pct}%` : '-'}
+                          </td>
+                        </tr>
+                      `;
+                    }).join('')}
+                    <tr class="bg-[#f0f4ea] font-black text-[#1e2513] border-t-2 border-black/10">
+                      <td class="p-2.5 uppercase tracking-wide">Total Regional</td>
+                      <td class="p-2.5 text-right text-sm font-black text-[#263116]">${blockTotal}</td>
+                      <td class="p-2.5 text-right text-xs font-black">100.0%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `);
+        }
+      });
+
+      if (renderedBlocksHTML.length === 0) {
+        container.innerHTML = `
+          <div class="bg-card-filled p-6 rounded-2xl shadow-lg text-center space-y-2 border border-white/50">
+            <i data-lucide="bar-chart-2" class="w-8 h-8 text-white/80 mx-auto"></i>
+            <h4 class="font-black text-sm text-white uppercase tracking-wider">Sin visitas registradas en esta semana</h4>
+            <p class="text-xs text-[#202715] font-semibold max-w-md mx-auto">
+              No existen visitas a Objetos de Inspección registradas en las OTs de las campañas para las fechas seleccionadas.
+            </p>
+          </div>
+        `;
+      } else {
+        container.innerHTML = renderedBlocksHTML.join('');
+      }
+
+      lucide.createIcons();
+    }
+
+    // Construcción del archivo Excel RAS tanto para descarga como para preparar correo
+    async function buildTechRASFile(campaignGroup, targetEmail) {
+      const targetUser = usersList.find(u => u.email.toLowerCase().trim() === targetEmail.toLowerCase().trim());
+      const rawAlias = targetUser?.alias || targetEmail.split('@')[0];
+      const userAlias = rawAlias.trim();
+      const techUpper = userAlias.toUpperCase().replace(/[^A-Z0-9ÁÉÍÓÚÜÑ\s]/gi, '').trim();
+
+      const targetOTs = workOrders.filter(o => {
+        const belongs = (o.tecnicoId || '').toLowerCase().trim() === targetEmail.toLowerCase().trim();
+        const c = (o.campaniaId || '').toUpperCase();
+        const matches = campaignGroup === 'CNR' ? (c === 'CNR') : (c === 'AY' || c === 'ALE' || c === 'RQNM');
+        return belongs && matches;
+      }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+      if (!targetOTs.length) {
+        alert(`No se encontraron OTs asignadas al técnico ${userAlias} para la campaña ${campaignGroup}.`);
+        return null;
+      }
+
+      const allVisitDates = new Set();
+      targetOTs.forEach(ot => {
+        (ot.historialDiario || []).forEach(h => {
+          if (h.fecha) allVisitDates.add(h.fecha);
+        });
+      });
+
+      const getMonday = (dStr) => {
+        const d = new Date(dStr + 'T12:00:00');
+        const day = d.getDay();
+        const diff = (day === 0 ? -6 : 1) - day;
+        d.setDate(d.getDate() + diff);
+        return d.toISOString().split('T')[0];
+      };
+
+      const uniqueMondays = [...new Set([...allVisitDates].map(getMonday))].sort();
+      const templateFileName = `plantilla_RAS_${campaignGroup}.xlsx`;
+
+      const response = await fetch(`./${templateFileName}`);
+      if (!response.ok) {
+        throw new Error(`No se pudo cargar '${templateFileName}'. Comprueba que el archivo esté disponible en el servidor.`);
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(arrayBuffer);
+
+      const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
+      if (!worksheet) throw new Error("No se pudo acceder a la plantilla.");
+      
+      worksheet.getCell('D4').value = userAlias;
+
+      let currentRow = 8;
+
+      if (uniqueMondays.length === 0) {
+        targetOTs.forEach(ot => {
+          worksheet.getCell(`C${currentRow}`).value = ot.nombre;
+          worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
+          worksheet.getCell(`E${currentRow}`).value = 0;
+          worksheet.getCell(`F${currentRow}`).value = Number(ot.recintosTotales || 0);
+          currentRow++;
+        });
+      } else {
+        uniqueMondays.forEach(mondayStr => {
+          const mondayDate = new Date(mondayStr + 'T12:00:00');
+          const weekDates = [];
+          for (let i = 0; i < 6; i++) {
+            const d = new Date(mondayDate);
+            d.setDate(mondayDate.getDate() + i);
+            weekDates.push(d.toISOString().split('T')[0]);
+          }
+
+          const fridayStr = weekDates[4];
+          const fmt = (s) => { const [y, m, dia] = s.split('-'); return `${dia}/${m}`; };
+          const semanaRango = `${fmt(mondayStr)} - ${fmt(fridayStr)}`;
+
+          targetOTs.forEach(ot => {
+            const hist = ot.historialDiario || [];
+            const weekYield = [0, 0, 0, 0, 0, 0];
+            let hasWorkThisWeek = false;
+
+            weekDates.forEach((dateStr, idx) => {
+              const h = hist.find(item => item.fecha === dateStr);
+              if (h) {
+                const val = parseInt(h.recintosHoy) || 0;
+                weekYield[idx] += val;
+                if (val > 0) hasWorkThisWeek = true;
+              }
+            });
+
+            if (hasWorkThisWeek) {
+              const sumSemana = weekYield.reduce((a, b) => a + b, 0);
+
+              const anteriores = hist
+                .filter(h => h.fecha < mondayStr)
+                .reduce((acc, h) => acc + (parseInt(h.recintosHoy) || 0), 0);
+
+              const histWeekEnd = hist
+                .filter(h => h.fecha <= weekDates[5])
+                .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+
+              const pendientes = histWeekEnd.length > 0 
+                ? histWeekEnd[0].recintosPendientes 
+                : (ot.recintosTotales - sumSemana);
+
+              worksheet.getCell(`B${currentRow}`).value = semanaRango;
+              worksheet.getCell(`C${currentRow}`).value = ot.nombre;
+              worksheet.getCell(`D${currentRow}`).value = Number(ot.recintosTotales || 0);
+              worksheet.getCell(`E${currentRow}`).value = Number(anteriores);
+              worksheet.getCell(`F${currentRow}`).value = Number(pendientes);
+
+              const colLetters = ['G', 'H', 'I', 'J', 'K', 'L'];
+              colLetters.forEach((col, i) => {
+                worksheet.getCell(`${col}${currentRow}`).value = weekYield[i] > 0 ? Number(weekYield[i]) : "";
+              });
+
+              worksheet.getCell(`M${currentRow}`).value = Number(sumSemana);
+              currentRow++;
+            }
+          });
+        });
+      }
+
+      const buffer = await workbook.xlsx.writeBuffer();
+
+      let fileName = "";
+      if (campaignGroup === 'CNR') {
+        fileName = `RAS_CST-CNR_2026_${techUpper}.xlsx`;
+      } else {
+        fileName = `RAS_CST-RQNM_2026_${techUpper}.xlsx`;
+      }
+
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      return { blob, fileName, userAlias, techUpper };
+    }
+
+    // (RESTAURADA) Descarga directa del RAS de un técnico. Faltaba en la versión anterior
+    // y por eso los botones "Descargar (.xlsx)" y "Descargar RAS" del gestor no funcionaban.
+    window.exportTechRAS = async (campaignGroup, techEmail) => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para descargar el parte.");
+        return;
+      }
+
+      try {
+        const fileData = await buildTechRASFile(campaignGroup, techEmail || currentUser.email);
+        if (!fileData) return;
+        saveAs(fileData.blob, fileData.fileName);
+      } catch (err) {
+        alert("❌ Error al exportar RAS del técnico: " + err.message);
+      }
+    };
+
+    window.exportCumulativeRAS = (campaignGroup) => {
+      if (!currentUser) return;
+      exportTechRAS(campaignGroup, currentUser.email);
+    };
+
+    // ==========================================================================
+    //  COMPARTIR RAS (menú nativo de Android: eliges Gmail u otra app y ya va adjunto)
+    //
+    //  Clave: navigator.share() solo funciona si se llama justo después del toque
+    //  del usuario. Generar el Excel tarda (fetch de plantilla + ExcelJS), así que
+    //  el archivo se PREPARA ANTES (al abrir Descargas / al cambiar los datos) y al
+    //  pulsar "Compartir Archivo" se llama a share() de inmediato, sin esperas.
+    // ==========================================================================
+    const rasShareCache = {};     // { CNR: { sig, file, blob, fileName, userAlias }, RQNM: {...} }
+    const rasShareBuilding = {};  // promesas en curso para no generar el mismo archivo dos veces
+    const XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+
+    // OTs del técnico actual para la campaña (misma lógica que buildTechRASFile)
+    function getUserRASOTs(campaignGroup) {
+      if (!currentUser) return [];
+      const me = currentUser.email.toLowerCase().trim();
+      return workOrders.filter(o => {
+        const belongs = (o.tecnicoId || '').toLowerCase().trim() === me;
+        const c = (o.campaniaId || '').toUpperCase();
+        const matches = campaignGroup === 'CNR' ? (c === 'CNR') : (c === 'AY' || c === 'ALE' || c === 'RQNM');
+        return belongs && matches;
+      });
+    }
+
+    // Firma de los datos: si cambian las OTs, el alias o las visitas, el archivo en caché queda obsoleto
+    function getRASShareSignature(campaignGroup) {
+      const me = (currentUser?.email || '').toLowerCase().trim();
+      const u = usersList.find(x => (x.email || '').toLowerCase().trim() === me);
+      return JSON.stringify([
+        u?.alias || '',
+        getUserRASOTs(campaignGroup).map(o => [o.id, o.nombre, o.recintosTotales, o.historialDiario || []])
+      ]);
+    }
+
+    async function prepareRASShareFile(campaignGroup) {
+      if (!currentUser || !getUserRASOTs(campaignGroup).length) return null;
+
+      const sig = getRASShareSignature(campaignGroup);
+      const cached = rasShareCache[campaignGroup];
+      if (cached && cached.sig === sig) return cached;
+      if (rasShareBuilding[campaignGroup]) return rasShareBuilding[campaignGroup];
+
+      rasShareBuilding[campaignGroup] = (async () => {
+        try {
+          const fileData = await buildTechRASFile(campaignGroup, currentUser.email);
+          if (!fileData) return null;
+          // Nombre "seguro" solo para compartir: sin acentos, ñ, espacios ni símbolos.
+          // Android/Chrome puede rechazar el share con "Permission denied" si el nombre del archivo los lleva.
+          const safeName = fileData.fileName
+            .normalize('NFD').replace(/[̀-ͯ]/g, '')
+            .replace(/[^A-Za-z0-9._-]+/g, '_')
+            .replace(/_+/g, '_');
+          const file = new File([fileData.blob], safeName, {
+            type: XLSX_MIME,
+            lastModified: Date.now()
+          });
+          const entry = { sig, file, blob: fileData.blob, fileName: fileData.fileName, userAlias: fileData.userAlias };
+          rasShareCache[campaignGroup] = entry;
+          return entry;
+        } catch (err) {
+          console.warn("No se pudo preparar el RAS para compartir:", err.message);
+          return null;
+        } finally {
+          delete rasShareBuilding[campaignGroup];
+        }
+      })();
+
+      return rasShareBuilding[campaignGroup];
+    }
+
+    // Prepara en segundo plano los dos RAS (CNR y RQNM) del técnico
+    function prefetchRASShareFiles() {
+      if (!currentUser) return;
+      ['CNR', 'RQNM'].forEach(g => { prepareRASShareFile(g); });
+    }
+
+    // Registro silencioso (opcional) de la entrega en Firestore, sin bloquear nada
+    function logRASDelivery(campaignGroup, entry) {
+      try {
+        const recipients = campaignGroup === 'CNR'
+          ? (emailConfig.cnrRecipients?.length ? emailConfig.cnrRecipients : ['arojo@geacam.com', 'asotos@geacam.com'])
+          : (emailConfig.rqnmRecipients?.length ? emailConfig.rqnmRecipients : ['arojo@geacam.com', 'sgonzalez@geacam.com']);
+        setDoc(doc(db, "ras_deliveries", `${currentUser.uid}_${campaignGroup}`), {
+          tecnicoEmail: currentUser.email,
+          tecnicoNombre: entry.userAlias,
+          campania: campaignGroup,
+          fileName: entry.fileName,
+          fechaGeneracion: new Date().toISOString(),
+          destinatarios: recipients,
+          asunto: `RAS ${campaignGroup} ${entry.userAlias}`
+        }).catch(err => console.warn("Aviso Firestore:", err));
+      } catch (e) { /* no crítico */ }
+    }
+
+    window.shareCumulativeRASNative = async (campaignGroup) => {
+      if (!currentUser) {
+        alert("Debes iniciar sesión para compartir el parte.");
+        return;
+      }
+
+      if (!getUserRASOTs(campaignGroup).length) {
+        alert(`No se encontraron OTs asignadas a tu usuario para la campaña ${campaignGroup}.`);
+        return;
+      }
+
+      const canNativeShare = !!(navigator.share && navigator.canShare);
+
+      // CAMINO RÁPIDO: archivo ya preparado y al día -> share() se llama de forma inmediata
+      // (sin ningún await antes), así el navegador lo acepta como acción del usuario.
+      let entry = rasShareCache[campaignGroup];
+      if (entry && entry.sig === getRASShareSignature(campaignGroup) && canNativeShare && navigator.canShare({ files: [entry.file] })) {
+        try {
+          await navigator.share({ files: [entry.file] });
+          logRASDelivery(campaignGroup, entry);
+          return;
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return; // el usuario cerró el menú
+          console.warn("Fallo en navigator.share:", shareErr.name, shareErr.message);
+          alert("No se pudo abrir el menú de compartir.\nError: " + shareErr.name + " - " + shareErr.message +
+                "\nTamaño: " + entry.file.size + " bytes | Tipo: " + entry.file.type +
+                "\nNombre compartido: " + entry.file.name +
+                "\nEn iframe: " + (window.self !== window.top) +
+                "\n\nSe descargará el archivo para que lo adjuntes manualmente.");
+          saveAs(entry.blob, entry.fileName);
+          return;
+        }
+      }
+
+      // CAMINO LENTO: el archivo aún no estaba listo (o los datos cambiaron). Se genera ahora.
+      try {
+        entry = await prepareRASShareFile(campaignGroup);
+        if (!entry) {
+          alert("No se pudo generar el archivo RAS. Inténtalo de nuevo.");
+          return;
+        }
+
+        if (!canNativeShare || !navigator.canShare({ files: [entry.file] })) {
+          // Navegador sin soporte (p. ej. escritorio): se descarga el archivo
+          saveAs(entry.blob, entry.fileName);
+          alert("Este navegador no permite compartir archivos directamente. Se ha descargado el Excel: adjúntalo manualmente a tu correo.");
+          return;
+        }
+
+        try {
+          await navigator.share({ files: [entry.file] });
+          logRASDelivery(campaignGroup, entry);
+        } catch (shareErr) {
+          if (shareErr.name === 'AbortError') return;
+          if (shareErr.name === 'NotAllowedError') {
+            // Se perdió el "toque" por la espera. Ahora el archivo ya está en caché: al pulsar otra vez va al instante.
+            alert("✅ Archivo preparado. Pulsa de nuevo «Compartir Archivo» para abrir el menú de compartir.");
+          } else {
+            console.warn("Fallo en navigator.share:", shareErr.name, shareErr.message);
+            saveAs(entry.blob, entry.fileName);
+            alert("No se pudo abrir el menú de compartir. Se ha descargado el archivo para que lo adjuntes manualmente.");
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        alert("Aviso: " + err.message);
+      }
+    };
+
+    window.handleActivityChange = () => {
+      const act = document.getElementById('km-actividad')?.value || 'CST-AY';
+      const label = document.getElementById('km-rendimiento-label');
+      const badge = document.getElementById('km-rendimiento-badge');
+      const rendInput = document.getElementById('km-rendimiento');
+
+      if (!label || !badge || !rendInput) return;
+
+      if (act === 'CST-AY' || act === 'CST-CNR' || act === 'CST-ALE') {
+        label.innerText = 'RECINTOS OT';
+        badge.classList.remove('hidden');
+        badge.innerText = 'Auto';
+        autoFillRecintosForDate();
+      } else if (act === 'CST-VEA' || act === 'CST-VEG') {
+        label.innerText = 'EXPLOTACIONES';
+        badge.classList.add('hidden');
+        if (!document.getElementById('km-edit-id').value) {
+          rendInput.value = '0';
+        }
+      } else if (act === 'CST RE/TR') {
+        label.innerText = 'RECINTOS';
+        badge.classList.add('hidden');
+        if (!document.getElementById('km-edit-id').value) {
+          rendInput.value = '0';
+        }
+      } else {
+        label.innerText = 'CANTIDAD';
+        badge.classList.add('hidden');
+      }
+    };
+
+    window.openAddOTModal = (origin = 'tecnico') => {
+      currentAddOTOrigin = origin;
+      document.getElementById('tech-ot-code-input').value = '';
+      document.getElementById('tech-ot-error').classList.add('hidden');
+      document.getElementById('ot-preview-card').classList.add('hidden');
+
+      const modalTitle = document.getElementById('modal-add-ot-title');
+      const techSelectBox = document.getElementById('box-add-ot-tech-select');
+      const assignedTechSelect = document.getElementById('add-ot-assigned-tech');
+
+      if (origin === 'gestor') {
+        modalTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir y Asignar Orden de Trabajo (Gestor)`;
+        techSelectBox.classList.remove('hidden');
+        assignedTechSelect.setAttribute('required', 'required');
+        assignedTechSelect.value = '';
+      } else {
+        modalTitle.innerHTML = `<i data-lucide="plus-circle" class="w-4 h-4 text-[#728157]"></i> Añadir Orden de Trabajo`;
+        techSelectBox.classList.add('hidden');
+        assignedTechSelect.removeAttribute('required');
+      }
+
+      document.getElementById('modal-add-ot').classList.remove('hidden');
+      lucide.createIcons();
+      document.getElementById('tech-ot-code-input').focus();
+    };
+
+    window.closeAddOTModal = () => {
+      document.getElementById('modal-add-ot').classList.add('hidden');
+    };
+
+    function parseAndValidateOT(code) {
+      const parts = code.trim().split('_');
+      if (parts.length < 4) {
+        return { error: "El código no tiene la estructura requerida (mínimo 4 secciones separadas por guion bajo)." };
+      }
+      if (parts[0].toUpperCase() !== 'OT') {
+        return { error: "El código de la Orden de Trabajo debe comenzar con 'OT_'." };
+      }
+
+      const camp = parts[1].toUpperCase();
+      if (!['CNR', 'AY', 'ALE', 'RQNM'].includes(camp)) {
+        return { error: `Campaña '${camp}' no reconocida. Debe ser CNR, AY o ALE.` };
+      }
+
+      const provCode = parts[parts.length - 2].toUpperCase();
+      if (!PROV_MAP[provCode]) {
+        return { error: `Código de provincia '${provCode}' no válido. Debe ser AB, CR, CU, GU o TO.` };
+      }
+
+      const recintosStr = parts[parts.length - 1];
+      const recintosNum = parseInt(recintosStr);
+      if (isNaN(recintosNum) || recintosNum <= 0 || !/^\d+$/.test(recintosStr)) {
+        return { error: `Los recintos al final '${recintosStr}' deben ser un número entero mayor que 0.` };
+      }
+
+      const rasGroup = camp === 'CNR' ? 'RAS Campaña CNR' : 'RAS Campaña RQNM';
+
+      return {
+        valid: true,
+        nombre: code.trim(),
+        campania: camp,
+        rasGroup: rasGroup,
+        provincia: PROV_MAP[provCode],
+        provinciaCode: provCode,
+        recintosTotales: recintosNum
+      };
+    }
+
+    // Previsualización instantánea en tiempo real al escribir el código
+    window.previewParsedOT = (code) => {
+      const previewCard = document.getElementById('ot-preview-card');
+      const errDiv = document.getElementById('tech-ot-error');
+
+      if (!code || code.trim().length < 8) {
+        previewCard.classList.add('hidden');
+        return;
+      }
+
+      const parsed = parseAndValidateOT(code);
+      if (parsed.valid) {
+        errDiv.classList.add('hidden');
+        previewCard.classList.remove('hidden');
+        document.getElementById('preview-camp').innerText = `${parsed.campania} (${parsed.rasGroup})`;
+        document.getElementById('preview-prov').innerText = `${parsed.provincia} (${parsed.provinciaCode})`;
+        document.getElementById('preview-rec').innerText = `${parsed.recintosTotales} recintos`;
+      } else {
+        previewCard.classList.add('hidden');
+      }
+    };
+
+    document.getElementById('form-tech-add-ot').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) return;
+
+      const codeInput = document.getElementById('tech-ot-code-input').value.trim();
+      const errDiv = document.getElementById('tech-ot-error');
+      errDiv.classList.add('hidden');
+
+      const parsed = parseAndValidateOT(codeInput);
+      if (parsed.error) {
+        errDiv.innerText = "❌ " + parsed.error;
+        errDiv.classList.remove('hidden');
+        return;
+      }
+
+      const exists = workOrders.some(o => o.nombre.toUpperCase() === parsed.nombre.toUpperCase());
+      if (exists) {
+        errDiv.innerText = "❌ Ya existe una Orden de Trabajo con ese código.";
+        errDiv.classList.remove('hidden');
+        return;
+      }
+
+      // Determinar técnico asignado
+      let assignedTechEmail = currentUser.email;
+      if (currentAddOTOrigin === 'gestor') {
+        const selectedTech = document.getElementById('add-ot-assigned-tech').value;
+        if (!selectedTech) {
+          errDiv.innerText = "❌ Por favor, selecciona el técnico al que se asignará la OT.";
+          errDiv.classList.remove('hidden');
+          return;
+        }
+        assignedTechEmail = selectedTech;
+      }
+
+      try {
+        const docRef = await addDoc(collection(db, "work_orders"), {
+          nombre: parsed.nombre,
+          campaniaId: parsed.campania,
+          provincia: parsed.provincia,
+          provinciaCode: parsed.provinciaCode,
+          tecnicoId: assignedTechEmail,
+          recintosTotales: parsed.recintosTotales,
+          recintosRestantes: parsed.recintosTotales,
+          estado: 'en_progreso',
+          historialDiario: [],
+          createdAt: new Date().toISOString()
+        });
+
+        closeAddOTModal();
+
+        const techDisplayName = getUserDisplayName(assignedTechEmail);
+        alert(`✅ OT creada y asignada con éxito:\n• Código: ${parsed.nombre}\n• Técnico Asignado: ${techDisplayName}\n• Planificación/Campaña: ${parsed.campania} (${parsed.rasGroup})\n• Provincia: ${parsed.provincia}\n• Recintos Totales: ${parsed.recintosTotales}`);
+
+        if (currentAddOTOrigin === 'tecnico') {
+          localStorage.setItem('ras_last_ot_' + currentUser.email, docRef.id);
+        }
+      } catch (err) {
+        errDiv.innerText = "❌ Error al guardar en base de datos: " + err.message;
+        errDiv.classList.remove('hidden');
+      }
+    });
+
+    window.processRASImportFile = async () => {
+      const fileInput = document.getElementById('ras-import-file');
+      const statusDiv = document.getElementById('ras-import-status');
+      const overrideEmail = document.getElementById('ras-import-tech-override').value;
+
+      if (!fileInput.files || !fileInput.files[0]) {
+        alert("Por favor, selecciona primero el archivo .xlsx de RAS.");
+        return;
+      }
+
+      statusDiv.classList.remove('hidden', 'text-red-700', 'text-emerald-700');
+      statusDiv.className = "text-xs bg-white p-3 rounded-xl shadow font-semibold text-slate-700 block";
+      statusDiv.innerText = "Leyendo y procesando el archivo...";
+
+      try {
+        const file = fileInput.files[0];
+        const arrayBuffer = await file.arrayBuffer();
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(arrayBuffer);
+
+        let worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
+
+        if (!worksheet) {
+          worksheet = workbook.getWorksheet('CNR') || 
+                      workbook.getWorksheet('RQNM') || 
+                      workbook.getWorksheet('RAS') || 
+                      workbook.getWorksheet('Hoja1');
+        }
+
+        if (!worksheet) {
+          throw new Error("No se encontró ninguna pestaña con datos en el archivo subido.");
+        }
+
+        const cellD4 = worksheet.getCell('D4').value;
+        const aliasInExcel = (cellD4 ? String(cellD4) : '').trim();
+
+        let assignedEmail = overrideEmail;
+        if (!assignedEmail && aliasInExcel) {
+          const found = usersList.find(u => 
+            (u.alias && u.alias.toLowerCase().trim() === aliasInExcel.toLowerCase().trim()) ||
+            (u.email && u.email.toLowerCase().includes(aliasInExcel.toLowerCase()))
+          );
+          if (found) assignedEmail = found.email;
+        }
+
+        if (!assignedEmail) {
+          throw new Error("No se pudo detectar el técnico por la celda D4 ('" + aliasInExcel + "'). Por favor, selecciona el técnico explícitamente en el desplegable de asignación antes de importar.");
+        }
+
+        let importedOTCount = 0;
+        let importedVisitsCount = 0;
+
+        const totalRows = worksheet.rowCount;
+
+        for (let rowNum = 8; rowNum <= totalRows; rowNum++) {
+          const row = worksheet.getRow(rowNum);
+          const otCodeRaw = row.getCell('C').value;
+          if (!otCodeRaw) continue;
+
+          const otCode = String(otCodeRaw).trim();
+          if (!otCode.toUpperCase().startsWith('OT_')) continue;
+
+          const semanaStr = row.getCell('B').value ? String(row.getCell('B').value).trim() : '';
+          let mondayDate = null;
+
+          if (semanaStr && semanaStr.includes('/')) {
+            const firstPart = semanaStr.split('-')[0].trim();
+            const [dStr, mStr] = firstPart.split('/');
+            const diaNum = parseInt(dStr);
+            const mesNum = parseInt(mStr);
+            if (!isNaN(diaNum) && !isNaN(mesNum)) {
+              const diaPad = diaNum < 10 ? `0${diaNum}` : `${diaNum}`;
+              const mesPad = mesNum < 10 ? `0${mesNum}` : `${mesNum}`;
+              mondayDate = new Date(`2026-${mesPad}-${diaPad}T12:00:00`);
+            }
+          }
+
+          const colKeys = ['G', 'H', 'I', 'J', 'K', 'L'];
+          const dailyYields = [];
+
+          colKeys.forEach((col, dayIndex) => {
+            const cellVal = row.getCell(col).value;
+            const recintos = cellVal ? parseInt(cellVal) : 0;
+            if (!isNaN(recintos) && recintos > 0 && mondayDate) {
+              const visitDate = new Date(mondayDate);
+              visitDate.setDate(mondayDate.getDate() + dayIndex);
+              const dateStr = visitDate.toISOString().split('T')[0];
+              dailyYields.push({
+                fecha: dateStr,
+                recintosHoy: recintos
+              });
+            }
+          });
+
+          let existingOT = workOrders.find(o => o.nombre.toUpperCase() === otCode.toUpperCase());
+          let otDocId = existingOT ? existingOT.id : null;
+          let currentHist = existingOT ? [...(existingOT.historialDiario || [])] : [];
+          let otTotales = existingOT ? existingOT.recintosTotales : (parseInt(row.getCell('D').value) || 0);
+
+          if (!existingOT) {
+            const parsed = parseAndValidateOT(otCode);
+            const provName = parsed.provincia || 'Ciudad Real';
+            const provCode = parsed.provinciaCode || 'CR';
+            const campId = parsed.campania || 'CNR';
+            otTotales = otTotales || parsed.recintosTotales || 0;
+
+            const newDoc = await addDoc(collection(db, "work_orders"), {
+              nombre: otCode,
+              campaniaId: campId,
+              provincia: provName,
+              provinciaCode: provCode,
+              tecnicoId: assignedEmail,
+              recintosTotales: otTotales,
+              recintosRestantes: otTotales,
+              estado: 'en_progreso',
+              historialDiario: [],
+              createdAt: new Date().toISOString()
+            });
+
+            otDocId = newDoc.id;
+            importedOTCount++;
+          }
+
+          dailyYields.forEach(dy => {
+            const existsVisit = currentHist.some(h => h.fecha === dy.fecha);
+            if (!existsVisit) {
+              currentHist.push({
+                fecha: dy.fecha,
+                recintosHoy: dy.recintosHoy,
+                recintosPendientes: 0
+              });
+              importedVisitsCount++;
+            }
+          });
+
+          currentHist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+          let runningPending = otTotales;
+          currentHist.forEach(item => {
+            runningPending = Math.max(0, runningPending - (item.recintosHoy || 0));
+            item.recintosPendientes = runningPending;
+          });
+
+          currentHist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+          const finalPending = currentHist.length > 0 ? currentHist[0].recintosPendientes : otTotales;
+
+          await updateDoc(doc(db, "work_orders", otDocId), {
+            historialDiario: currentHist,
+            recintosRestantes: finalPending,
+            estado: finalPending === 0 ? 'completada' : 'en_progreso'
+          });
+        }
+
+        statusDiv.className = "text-xs bg-emerald-50 text-emerald-800 p-3 rounded-xl shadow font-bold border border-emerald-200 block";
+        statusDiv.innerHTML = `✅ <strong>¡Importación completada!</strong><br>• Asignado a: ${assignedEmail}<br>• OTs nuevas creadas: ${importedOTCount}<br>• Visitas incorporadas: ${importedVisitsCount}`;
+        fileInput.value = '';
+
+      } catch (err) {
+        statusDiv.className = "text-xs bg-rose-50 text-rose-800 p-3 rounded-xl shadow font-bold border border-rose-200 block";
+        statusDiv.innerText = "❌ Error al procesar el Excel: " + err.message;
+      }
+    };
+
     function getSortedUserMileageLogs() {
       if (!currentUser) return [];
       return mileageLogs
@@ -913,34 +2382,78 @@
         .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
     }
 
+    function getLastVehicleLogBeforeDate(plate, targetDate) {
+      if (!plate || !currentUser) return null;
+      const cleanPlate = plate.trim().toUpperCase();
+      return mileageLogs
+        .filter(l => 
+          l.usuarioEmail === currentUser.email &&
+          l.fecha && l.fecha < targetDate &&
+          l.matricula && l.matricula.trim().toUpperCase() === cleanPlate
+        )
+        .sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''))[0] || null;
+    }
+
     function prefillMileageDefaults() {
       if (document.getElementById('km-edit-id').value) return;
 
       const userLogs = getSortedUserMileageLogs();
       if (!userLogs.length) {
-        autoFillRecintosForDate();
+        handleActivityChange();
         return;
       }
 
+      const currentDate = document.getElementById('km-date')?.value || new Date().toISOString().split('T')[0];
+      const currentPlate = document.getElementById('km-matricula')?.value.trim().toUpperCase();
+
       const last = userLogs[0];
+      if (!currentPlate && last.matricula) {
+        document.getElementById('km-matricula').value = last.matricula;
+      }
       if (last.gabineteCampo) document.getElementById('km-gab-campo').value = last.gabineteCampo;
       if (last.actividad) document.getElementById('km-actividad').value = last.actividad;
-      if (last.matricula) document.getElementById('km-matricula').value = last.matricula;
-      if (last.kmFin !== undefined && last.kmFin !== null && last.kmFin > 0) {
-        document.getElementById('km-inicio').value = last.kmFin;
+
+      const activePlate = document.getElementById('km-matricula').value.trim().toUpperCase();
+      const lastVehicleLog = getLastVehicleLogBeforeDate(activePlate, currentDate);
+
+      if (lastVehicleLog && lastVehicleLog.kmFin !== undefined && lastVehicleLog.kmFin !== null && lastVehicleLog.kmFin > 0) {
+        document.getElementById('km-inicio').value = lastVehicleLog.kmFin;
+      } else if (lastVehicleLog && lastVehicleLog.kmInicio !== undefined && lastVehicleLog.kmInicio !== null && lastVehicleLog.kmInicio > 0) {
+        document.getElementById('km-inicio').value = lastVehicleLog.kmInicio;
       } else {
         document.getElementById('km-inicio').value = '';
       }
 
-      autoFillRecintosForDate();
+      handleActivityChange();
       calcDailyKm();
     }
 
     window.handleKmDateChange = () => {
-      autoFillRecintosForDate();
+      handleActivityChange();
+      if (!document.getElementById('km-edit-id').value) {
+        handleKmPlateOrDateChange();
+      }
+    };
+
+    window.handleKmPlateOrDateChange = () => {
+      if (document.getElementById('km-edit-id').value) return;
+      const curDate = document.getElementById('km-date')?.value;
+      const plate = document.getElementById('km-matricula')?.value.trim().toUpperCase();
+      if (!plate || !curDate) return;
+
+      const lastVehLog = getLastVehicleLogBeforeDate(plate, curDate);
+      if (lastVehLog && lastVehLog.kmFin !== undefined && lastVehLog.kmFin !== null && lastVehLog.kmFin > 0) {
+        document.getElementById('km-inicio').value = lastVehLog.kmFin;
+      } else {
+        document.getElementById('km-inicio').value = '';
+      }
+      calcDailyKm();
     };
 
     function autoFillRecintosForDate() {
+      const act = document.getElementById('km-actividad')?.value || 'CST-AY';
+      if (!['CST-AY', 'CST-CNR', 'CST-ALE'].includes(act)) return;
+
       const targetDate = document.getElementById('km-date')?.value;
       if (!targetDate || !currentUser) return;
 
@@ -1024,17 +2537,18 @@
       }
 
       const kmTotales = (kmIni !== null && kmFin !== null && kmFin >= kmIni) ? (kmFin - kmIni) : 0;
-
       const isSplit = document.getElementById('km-toggle-split').checked;
       const curUserDoc = usersList.find(u => u.email === currentUser.email);
       const aliasName = curUserDoc?.alias || currentUser.email.split('@')[0];
+      const curPlate = document.getElementById('km-matricula').value.trim().toUpperCase() || '';
+      const curDate = document.getElementById('km-date').value;
 
       const payload = {
         centroCoste: "202-TT-0-086-26",
         usuarioEmail: currentUser.email,
         usuarioAlias: aliasName,
-        fecha: document.getElementById('km-date').value,
-        mes: document.getElementById('km-date').value.slice(0, 7),
+        fecha: curDate,
+        mes: curDate.slice(0, 7),
         gabineteCampo: document.getElementById('km-gab-campo').value,
         actividad: document.getElementById('km-actividad').value,
         rendimientoRecintos: parseInt(document.getElementById('km-rendimiento').value) || 0,
@@ -1044,7 +2558,7 @@
         horaEntrada2: isSplit ? (document.getElementById('km-hora-in-2').value || '') : '',
         horaSalida2: isSplit ? (document.getElementById('km-hora-out-2').value || '') : '',
         ruta: document.getElementById('km-ruta-full').value,
-        matricula: document.getElementById('km-matricula').value.trim().toUpperCase() || '',
+        matricula: curPlate,
         kmInicio: kmIni !== null ? kmIni : 0,
         kmFin: kmFin !== null ? kmFin : 0,
         kmTotales: kmTotales,
@@ -1058,14 +2572,27 @@
       try {
         if (editId) {
           await updateDoc(doc(db, "mileage_logs", editId), payload);
-          alert("Jornada actualizada correctamente.");
         } else {
           await addDoc(collection(db, "mileage_logs"), {
             ...payload,
             createdAt: new Date().toISOString()
           });
-          alert("Jornada guardada correctamente.");
         }
+
+        if (curPlate && kmIni !== null && kmIni > 0) {
+          const prevLog = getLastVehicleLogBeforeDate(curPlate, curDate);
+          if (prevLog && (!prevLog.kmFin || prevLog.kmFin === 0)) {
+            const prevIni = prevLog.kmInicio || 0;
+            const updatedTotales = (kmIni >= prevIni) ? (kmIni - prevIni) : 0;
+            await updateDoc(doc(db, "mileage_logs", prevLog.id), {
+              kmFin: kmIni,
+              kmTotales: updatedTotales,
+              updatedAt: new Date().toISOString()
+            });
+          }
+        }
+
+        alert(editId ? "Jornada actualizada correctamente." : "Jornada guardada correctamente.");
         cancelKmEdit();
       } catch (err) {
         alert("❌ Error: " + err.message);
@@ -1101,6 +2628,8 @@
           if (l.otrosGastosImporte) gastosArr.push(`${l.otrosGastosImporte}€ Otros`);
           const gastosStr = gastosArr.join(' · ') || 'Sin gastos adicionales';
 
+          const labelTipo = (l.actividad === 'CST-VEA' || l.actividad === 'CST-VEG') ? 'Explotaciones' : 'Recintos';
+
           return `
             <div class="bg-white p-3.5 rounded-xl text-xs space-y-2.5 shadow">
               <div class="flex justify-between items-center">
@@ -1117,7 +2646,7 @@
 
               <div class="flex justify-between items-center text-[11px] pt-1 border-t border-slate-100">
                 <div>
-                  <span class="text-slate-500 font-bold">Recintos:</span> <strong class="text-[#2c371b] font-bold">${l.rendimientoRecintos || 0}</strong>
+                  <span class="text-slate-500 font-bold">${labelTipo}:</span> <strong class="text-[#2c371b] font-bold">${l.rendimientoRecintos || 0}</strong>
                   <span class="mx-1.5 text-slate-300">|</span>
                   <span class="text-slate-500 font-bold">Km:</span> <strong class="text-slate-800 font-bold">${l.kmTotales || 0}</strong>
                 </div>
@@ -1164,7 +2693,6 @@
       lucide.createIcons();
     }
 
-    // --- FUNCIÓN: ACTUALIZAR SELECTOR DE MATRÍCULAS USADAS EN EL MES ---
     window.updateVehiclePlatesOptions = () => {
       const selectedMonth = document.getElementById('vehicle-export-month')?.value;
       const plateSelect = document.getElementById('vehicle-export-plate');
@@ -1185,7 +2713,38 @@
       }
     };
 
-    // --- FUNCIÓN 1: EXPORTACIÓN PARTE DE ACTIVIDADES ---
+    function updateRASBadges() {
+      if (!currentUser) return;
+      const userOTs = workOrders.filter(o => o.tecnicoId === currentUser.email);
+
+      const hasCNR = userOTs.some(o => (o.campaniaId || '').toUpperCase() === 'CNR' && (o.historialDiario || []).length > 0);
+      const hasRQNM = userOTs.some(o => ['AY', 'ALE', 'RQNM'].includes((o.campaniaId || '').toUpperCase()) && (o.historialDiario || []).length > 0);
+
+      const badgeCNR = document.getElementById('badge-ras-cnr');
+      const badgeRQNM = document.getElementById('badge-ras-rqnm');
+
+      if (badgeCNR) {
+        badgeCNR.innerHTML = hasCNR 
+          ? `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Datos listos` 
+          : `<span class="w-2 h-2 rounded-full bg-slate-400"></span> Sin datos`;
+        badgeCNR.className = hasCNR 
+          ? "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-950/40 text-amber-200 border border-amber-400/30 shadow-xs flex items-center gap-1.5" 
+          : "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5";
+      }
+
+      if (badgeRQNM) {
+        badgeRQNM.innerHTML = hasRQNM 
+          ? `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span> Datos listos` 
+          : `<span class="w-2 h-2 rounded-full bg-slate-400"></span> Sin datos`;
+        badgeRQNM.className = hasRQNM 
+          ? "px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase bg-amber-950/40 text-amber-200 border border-amber-400/30 shadow-xs flex items-center gap-1.5" 
+          : "px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-black/20 text-white/60 flex items-center gap-1.5";
+      }
+
+      // Deja listos en segundo plano los Excel para "Compartir Archivo" (ver bloque COMPARTIR RAS)
+      prefetchRASShareFiles();
+    }
+
     window.exportMonthlyReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1216,23 +2775,21 @@
       try {
         const response = await fetch('./Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx');
         if (!response.ok) {
-          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'. Asegúrate de que el archivo esté subido en la raíz de tu repositorio con ese nombre exacto.");
+          throw new Error("No se pudo cargar 'Parte_Seguimiento_Mensual_Actividades_Geacam.xlsx'.");
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.getWorksheet(1);
+        const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
 
-        // Cabecera
         worksheet.getCell('M6').value = year;
         worksheet.getCell('O6').value = monthNameUpper;
         worksheet.getCell('D8').value = userAlias;
 
         const centroCosteM9 = worksheet.getCell('M9').value || "202-TT-0-086-26";
 
-        // Días 1 al 31 (Filas 14 a 44)
         for (let dia = 1; dia <= 31; dia++) {
           const rowNum = 13 + dia;
           const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
@@ -1280,7 +2837,6 @@
       }
     };
 
-    // --- FUNCIÓN 2: EXPORTACIÓN SEGUIMIENTO DE VEHÍCULO (PE-SGI-04) ---
     window.exportVehicleReportExcel = async () => {
       if (!currentUser) {
         alert("Debes iniciar sesión para descargar el parte.");
@@ -1306,7 +2862,6 @@
       const monthAbr = MESES_ABR[monthIdx] || '';
       const yearShort = yearStr.slice(-2);
 
-      // Filtrar jornadas de este vehículo en el mes
       const vehicleLogs = mileageLogs.filter(l => 
         l.usuarioEmail === currentUser.email && 
         l.fecha && l.fecha.startsWith(selectedMonth) &&
@@ -1317,62 +2872,51 @@
       const userAlias = curUserDoc?.alias || currentUser.email.split('@')[0];
 
       try {
-        // Intentar cargar la plantilla (admite 'Seguimiento Vehiculo.xlsx' o 'Seguimiento_Vehiculo.xlsx')
         let response = await fetch('./Seguimiento Vehiculo.xlsx');
         if (!response.ok) {
           response = await fetch('./Seguimiento_Vehiculo.xlsx');
         }
         if (!response.ok) {
-          throw new Error("No se pudo cargar 'Seguimiento Vehiculo.xlsx'. Asegúrate de que el archivo esté subido en la raíz de tu repositorio.");
+          throw new Error("No se pudo cargar 'Seguimiento Vehiculo.xlsx'.");
         }
 
         const arrayBuffer = await response.arrayBuffer();
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.load(arrayBuffer);
 
-        const worksheet = workbook.getWorksheet(1);
+        const worksheet = workbook.worksheets.find(ws => ws && ws.rowCount > 0) || workbook.worksheets[0];
 
-        // 1. RELLENAR CABECERA
-        worksheet.getCell('D2').value = selectedPlate;   // Celda D2: Matrícula
-        worksheet.getCell('I2').value = year;            // Celda I2: Año
-        worksheet.getCell('J2').value = monthNameUpper;  // Celda J2: Mes
+        worksheet.getCell('D2').value = selectedPlate;
+        worksheet.getCell('I2').value = year;
+        worksheet.getCell('J2').value = monthNameUpper;
 
-        // 2. RELLENAR DÍAS 1 AL 31 (Filas 5 a 35)
         for (let dia = 1; dia <= 31; dia++) {
-          const rowNum = 4 + dia; // Día 1 = Fila 5
+          const rowNum = 4 + dia;
           const diaPadded = dia < 10 ? `0${dia}` : `${dia}`;
           const dateStr = `${selectedMonth}-${diaPadded}`;
 
           const log = vehicleLogs.find(l => l.fecha === dateStr);
+          const cellTotalKm = worksheet.getCell(`G${rowNum}`);
+          cellTotalKm.value = null;
 
           if (log) {
-            // Columna B: Conductor
             worksheet.getCell(`B${rowNum}`).value = userAlias;
-
-            // Columna C: Motivo del desplazamiento
             worksheet.getCell(`C${rowNum}`).value = log.ruta || "";
-
-            // Columna E: Km Inicio
             worksheet.getCell(`E${rowNum}`).value = (log.kmInicio !== undefined && log.kmInicio !== null && log.kmInicio > 0) ? Number(log.kmInicio) : "";
-
-            // Columna F: Km Final
             worksheet.getCell(`F${rowNum}`).value = (log.kmFin !== undefined && log.kmFin !== null && log.kmFin > 0) ? Number(log.kmFin) : "";
 
-            // Columna G: Total Km
             const kmIniNum = (log.kmInicio !== undefined && log.kmInicio !== null) ? Number(log.kmInicio) : null;
             const kmFinNum = (log.kmFin !== undefined && log.kmFin !== null) ? Number(log.kmFin) : null;
             const kmTot = (kmIniNum !== null && kmFinNum !== null && kmFinNum >= kmIniNum) ? (kmFinNum - kmIniNum) : 0;
-            worksheet.getCell(`G${rowNum}`).value = kmTot;
+            cellTotalKm.value = kmTot;
 
-            // Columna H: Combustible - Litros
             worksheet.getCell(`H${rowNum}`).value = log.repostajeLitros ? Number(log.repostajeLitros) : "";
-
-            // Columna I: Combustible - Importe (€)
             worksheet.getCell(`I${rowNum}`).value = log.repostajeImporte ? Number(log.repostajeImporte) : "";
+          } else {
+            cellTotalKm.value = "";
           }
         }
 
-        // 3. GENERAR Y DESCARGAR
         const buffer = await workbook.xlsx.writeBuffer();
         const safePlate = selectedPlate.replace(/[^a-zA-Z0-9]/g, '');
         const fileName = `Seguimiento_Vehiculo_${safePlate}_${monthAbr}_${yearShort}.xlsx`;
@@ -1392,6 +2936,7 @@
       document.getElementById('km-date').value = log.fecha || '';
       document.getElementById('km-gab-campo').value = log.gabineteCampo || 'Campo';
       document.getElementById('km-actividad').value = log.actividad || 'CST-AY';
+      handleActivityChange();
       document.getElementById('km-rendimiento').value = log.rendimientoRecintos || 0;
       document.getElementById('km-hora-in-1').value = log.horaEntrada1 || '';
       document.getElementById('km-hora-out-1').value = log.horaSalida1 || '';
@@ -1469,19 +3014,32 @@
       }
     };
 
-    // --- MÉTODOS OTs Y GESTOR ---
     function renderOTSelect() {
       const select = document.getElementById('ot-select');
       select.innerHTML = '<option value="">-- Selecciona una OT --</option>';
 
-      const myOTs = workOrders.filter(ot => ot.tecnicoId === currentUser.email || userRole === 'gestor');
+      if (!currentUser) return;
 
-      myOTs.forEach(ot => {
+      const myOTs = workOrders.filter(ot => ot.tecnicoId === currentUser.email);
+
+      const inProgress = myOTs.filter(o => o.recintosRestantes > 0);
+      const completed = myOTs.filter(o => o.recintosRestantes === 0);
+
+      inProgress.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+      completed.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+      inProgress.forEach(ot => {
         const opt = document.createElement('option');
         opt.value = ot.id;
-        const isDone = ot.recintosRestantes === 0;
-        opt.innerText = `${isDone ? '✔ [FINALIZADA] ' : ''}${ot.nombre} - ${ot.provincia}`;
-        if (isDone) opt.className = 'ot-completed-option';
+        opt.innerText = `${ot.nombre} - ${ot.provincia}`;
+        select.appendChild(opt);
+      });
+
+      completed.forEach(ot => {
+        const opt = document.createElement('option');
+        opt.value = ot.id;
+        opt.innerText = `✔ [FINALIZADA] ${ot.nombre} - ${ot.provincia}`;
+        opt.className = 'ot-completed-option';
         select.appendChild(opt);
       });
 
@@ -1489,6 +3047,8 @@
       if (lastId && myOTs.some(o => o.id === lastId)) {
         select.value = lastId;
         selectOT(lastId);
+      } else if (currentOT && !myOTs.some(o => o.id === currentOT.id)) {
+        selectOT('');
       }
     }
 
@@ -1515,13 +3075,123 @@
       const badge = document.getElementById('ot-card-badge');
       if (currentOT.recintosRestantes === 0) {
         badge.innerText = "Finalizada";
-        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#2c371b] shadow";
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-white text-[#2c371b] shadow shrink-0";
       } else {
         badge.innerText = "En Progreso";
-        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 shadow";
+        badge.className = "px-2 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-100 text-amber-900 shadow shrink-0";
+      }
+
+      const regVisited = document.getElementById('reg-visited');
+      if (regVisited) {
+        regVisited.value = '';
+        regVisited.max = currentOT.recintosRestantes;
       }
 
       renderOTHistory();
+    };
+
+    // --- EDICIÓN Y ELIMINACIÓN DE OT POR PARTE DEL TÉCNICO ---
+    window.openTechEditOTModal = () => {
+      if (!currentOT) return;
+      document.getElementById('tech-edit-ot-id').value = currentOT.id;
+      document.getElementById('tech-edit-ot-code-input').value = currentOT.nombre || '';
+      document.getElementById('tech-edit-ot-error').classList.add('hidden');
+      previewParsedTechEditOT(currentOT.nombre || '');
+      document.getElementById('modal-tech-edit-ot').classList.remove('hidden');
+      lucide.createIcons();
+    };
+
+    window.closeTechEditOTModal = () => {
+      document.getElementById('modal-tech-edit-ot').classList.add('hidden');
+    };
+
+    window.previewParsedTechEditOT = (code) => {
+      const card = document.getElementById('tech-edit-preview-card');
+      const errDiv = document.getElementById('tech-edit-ot-error');
+      if (!code || code.trim().length < 8) {
+        card.classList.add('hidden');
+        return;
+      }
+
+      const parsed = parseAndValidateOT(code);
+      if (parsed.valid) {
+        errDiv.classList.add('hidden');
+        card.classList.remove('hidden');
+        document.getElementById('tech-edit-preview-camp').innerText = parsed.campania;
+        document.getElementById('tech-edit-preview-prov').innerText = parsed.provincia;
+        document.getElementById('tech-edit-preview-rec').innerText = `${parsed.recintosTotales} recintos`;
+      } else {
+        card.classList.add('hidden');
+      }
+    };
+
+    document.getElementById('form-tech-edit-ot')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser || !currentOT) return;
+
+      const codeInput = document.getElementById('tech-edit-ot-code-input').value.trim();
+      const errDiv = document.getElementById('tech-edit-ot-error');
+      errDiv.classList.add('hidden');
+
+      const parsed = parseAndValidateOT(codeInput);
+      if (parsed.error) {
+        errDiv.innerText = "❌ " + parsed.error;
+        errDiv.classList.remove('hidden');
+        return;
+      }
+
+      // Si cambia el nombre a uno que ya existe en otra OT distinta
+      const duplicate = workOrders.some(o => o.id !== currentOT.id && o.nombre.toUpperCase() === parsed.nombre.toUpperCase());
+      if (duplicate) {
+        errDiv.innerText = "❌ Ya existe otra Orden de Trabajo con ese mismo código.";
+        errDiv.classList.remove('hidden');
+        return;
+      }
+
+      try {
+        const hist = [...(currentOT.historialDiario || [])];
+        hist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+        let runningPending = parsed.recintosTotales;
+        hist.forEach(item => {
+          runningPending = Math.max(0, runningPending - (item.recintosHoy || 0));
+          item.recintosPendientes = runningPending;
+        });
+        hist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+        const finalPending = hist.length > 0 ? hist[0].recintosPendientes : parsed.recintosTotales;
+
+        await updateDoc(doc(db, "work_orders", currentOT.id), {
+          nombre: parsed.nombre,
+          campaniaId: parsed.campania,
+          provincia: parsed.provincia,
+          provinciaCode: parsed.provinciaCode,
+          recintosTotales: parsed.recintosTotales,
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
+          historialDiario: hist,
+          updatedAt: new Date().toISOString()
+        });
+
+        closeTechEditOTModal();
+        alert("✅ Orden de Trabajo modificada correctamente.");
+      } catch (err) {
+        errDiv.innerText = "❌ Error al actualizar: " + err.message;
+        errDiv.classList.remove('hidden');
+      }
+    });
+
+    window.deleteCurrentTechOT = async () => {
+      if (!currentOT) return;
+      const confirmDelete = confirm(`¿Estás seguro de que deseas eliminar permanentemente la OT "${currentOT.nombre}" y todos sus registros?`);
+      if (!confirmDelete) return;
+
+      try {
+        await deleteDoc(doc(db, "work_orders", currentOT.id));
+        closeTechEditOTModal();
+        selectOT('');
+        alert("✅ La Orden de Trabajo ha sido eliminada.");
+      } catch (err) {
+        alert("❌ Error al eliminar la OT: " + err.message);
+      }
     };
 
     function renderOTHistory() {
@@ -1536,11 +3206,11 @@
       histDiv.innerHTML = hist.map((h, idx) => `
         <div class="bg-white/90 p-2.5 rounded-xl text-xs flex justify-between items-center shadow">
           <div>
-            <span class="font-bold text-slate-700">${h.fecha}</span> — Rev: <strong class="text-[#2c371b]">${h.recintosHoy}</strong> (Pend: ${h.recintosPendientes})
+            <span class="font-bold text-slate-700">${h.fecha}</span> — Visitados: <strong class="text-[#2c371b]">${h.recintosHoy}</strong> (Pendientes: ${h.recintosPendientes})
           </div>
           <div class="flex gap-1">
-            <button onclick="editHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-[#728157] transition"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-            <button onclick="deleteHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-rose-700 transition"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+            <button onclick="editHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-[#728157] transition" title="Modificar recintos visitados"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="deleteHistoryItem(${idx})" class="p-1 text-slate-400 hover:text-rose-700 transition" title="Eliminar visita"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
           </div>
         </div>
       `).join('');
@@ -1551,57 +3221,87 @@
       e.preventDefault();
       if (!currentOT) return;
 
-      const pendingNew = parseInt(document.getElementById('reg-pending').value);
-      if (pendingNew > currentOT.recintosTotales) {
-        alert(`❌ Los recintos pendientes no pueden superar el total (${currentOT.recintosTotales}).`);
+      const visitedToday = parseInt(document.getElementById('reg-visited').value);
+      if (isNaN(visitedToday) || visitedToday <= 0) {
+        alert("❌ Debes indicar una cantidad de recintos visitados mayor que 0.");
         return;
       }
 
-      const visitedToday = currentOT.recintosRestantes - pendingNew;
+      if (visitedToday > currentOT.recintosRestantes) {
+        alert(`❌ Los recintos visitados hoy (${visitedToday}) no pueden ser mayores que los recintos pendientes actuales (${currentOT.recintosRestantes}).`);
+        return;
+      }
+
+      const inputDate = document.getElementById('reg-date').value;
       const newHistory = [...(currentOT.historialDiario || [])];
-      newHistory.unshift({
-        fecha: document.getElementById('reg-date').value,
-        recintosPendientes: pendingNew,
-        recintosHoy: visitedToday > 0 ? visitedToday : 0
+
+      newHistory.push({
+        fecha: inputDate,
+        recintosHoy: visitedToday,
+        recintosPendientes: 0
       });
+
+      newHistory.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      let runningPending = currentOT.recintosTotales;
+      newHistory.forEach(item => {
+        runningPending = Math.max(0, runningPending - (item.recintosHoy || 0));
+        item.recintosPendientes = runningPending;
+      });
+
+      newHistory.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const finalPending = newHistory.length > 0 ? newHistory[0].recintosPendientes : currentOT.recintosTotales;
 
       try {
         await updateDoc(doc(db, "work_orders", currentOT.id), {
-          recintosRestantes: pendingNew,
-          estado: pendingNew === 0 ? 'completada' : 'en_progreso',
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
           historialDiario: newHistory
         });
-        alert("Visita guardada.");
-        autoFillRecintosForDate();
+
+        document.getElementById('reg-visited').value = '';
+        alert("Visita registrada correctamente.");
+        handleActivityChange();
       } catch (error) {
-        alert("Error: " + error.message);
+        alert("Error al guardar visita: " + error.message);
       }
     });
 
     window.editHistoryItem = async (index) => {
       if (!currentOT) return;
-      const hist = currentOT.historialDiario || [];
+      const hist = [...(currentOT.historialDiario || [])];
       const item = hist[index];
       if (!item) return;
 
-      const newPending = prompt(`Modificar pendientes para ${item.fecha}:`, item.recintosPendientes);
-      if (newPending === null) return;
+      const newVisitedStr = prompt(`Modificar recintos visitados para la fecha ${item.fecha}:`, item.recintosHoy);
+      if (newVisitedStr === null) return;
 
-      const valPending = parseInt(newPending);
-      if (isNaN(valPending) || valPending < 0) return;
+      const newVisited = parseInt(newVisitedStr);
+      if (isNaN(newVisited) || newVisited <= 0) {
+        alert("❌ La cantidad debe ser un número entero mayor a 0. Para borrar la visita, usa el botón de papelera.");
+        return;
+      }
 
-      hist[index].recintosPendientes = valPending;
-      const latestPending = hist[0].recintosPendientes;
+      hist[index].recintosHoy = newVisited;
+
+      hist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      let runningPending = currentOT.recintosTotales;
+      hist.forEach(h => {
+        runningPending = Math.max(0, runningPending - (h.recintosHoy || 0));
+        h.recintosPendientes = runningPending;
+      });
+
+      hist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const finalPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
 
       try {
         await updateDoc(doc(db, "work_orders", currentOT.id), {
-          recintosRestantes: latestPending,
-          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
           historialDiario: hist
         });
-        autoFillRecintosForDate();
+        handleActivityChange();
       } catch (e) {
-        alert("Error: " + e.message);
+        alert("Error al actualizar visita: " + e.message);
       }
     };
 
@@ -1609,83 +3309,28 @@
       if (!currentOT || !confirm("¿Eliminar este registro de visita?")) return;
       const hist = [...(currentOT.historialDiario || [])];
       hist.splice(index, 1);
-      const latestPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
+
+      hist.sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+      let runningPending = currentOT.recintosTotales;
+      hist.forEach(h => {
+        runningPending = Math.max(0, runningPending - (h.recintosHoy || 0));
+        h.recintosPendientes = runningPending;
+      });
+
+      hist.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+      const finalPending = hist.length > 0 ? hist[0].recintosPendientes : currentOT.recintosTotales;
 
       try {
         await updateDoc(doc(db, "work_orders", currentOT.id), {
-          recintosRestantes: latestPending,
-          estado: latestPending === 0 ? 'completada' : 'en_progreso',
+          recintosRestantes: finalPending,
+          estado: finalPending === 0 ? 'completada' : 'en_progreso',
           historialDiario: hist
         });
-        autoFillRecintosForDate();
+        handleActivityChange();
       } catch (e) {
-        alert("Error: " + e.message);
+        alert("Error al eliminar visita: " + e.message);
       }
     };
-
-    window.updateOTRecintosLimitHint = () => {
-      const campId = document.getElementById('ot-camp-sel').value;
-      const prov = document.getElementById('ot-prov-sel').value;
-      const hint = document.getElementById('ot-recintos-hint');
-
-      if (!campId || !prov) {
-        hint.innerHTML = `Selecciona una campaña y provincia.`;
-        return;
-      }
-
-      const camp = campaigns.find(c => c.id === campId);
-      const totalCampProv = camp?.provBreakdown?.[prov] || 0;
-      const assigned = workOrders
-        .filter(o => o.campaniaId === campId && o.provincia === prov)
-        .reduce((sum, o) => sum + (parseInt(o.recintosTotales) || 0), 0);
-      const available = totalCampProv - assigned;
-
-      if (available <= 0) {
-        hint.className = "text-[11px] bg-rose-50 text-rose-800 p-2.5 rounded-xl font-bold shadow";
-        hint.innerHTML = `Límite alcanzado en ${prov}. Planificados: ${totalCampProv}, Asignados: ${assigned}.`;
-      } else {
-        hint.className = "text-[11px] bg-white text-[#252f18] p-2.5 rounded-xl font-bold shadow";
-        hint.innerHTML = `Disponibles en ${prov}: <strong>${available}</strong> de ${totalCampProv}.`;
-      }
-    };
-
-    document.getElementById('form-ot').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const campId = document.getElementById('ot-camp-sel').value;
-      const prov = document.getElementById('ot-prov-sel').value;
-      const totalRecs = parseInt(document.getElementById('ot-recintos').value);
-
-      const camp = campaigns.find(c => c.id === campId);
-      const totalCampProv = camp?.provBreakdown?.[prov] || 0;
-      const assigned = workOrders
-        .filter(o => o.campaniaId === campId && o.provincia === prov)
-        .reduce((sum, o) => sum + (parseInt(o.recintosTotales) || 0), 0);
-      const available = totalCampProv - assigned;
-
-      if (totalRecs > available) {
-        alert(`❌ Supera el disponible. Solo quedan ${available} recintos.`);
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, "work_orders"), {
-          nombre: document.getElementById('ot-code').value,
-          campaniaId: campId,
-          provincia: prov,
-          tecnicoId: document.getElementById('ot-tech-select').value,
-          recintosTotales: totalRecs,
-          recintosRestantes: totalRecs,
-          estado: 'en_progreso',
-          historialDiario: []
-        });
-        document.getElementById('ot-code').value = '';
-        document.getElementById('ot-recintos').value = '';
-        updateOTRecintosLimitHint();
-        alert("OT generada correctamente.");
-      } catch (error) {
-        alert("Error: " + error.message);
-      }
-    });
 
     window.renderOTTable = () => {
       const filter = (document.getElementById('filter-ot-table')?.value || '').toLowerCase();
@@ -1705,9 +3350,9 @@
         const isDone = o.recintosRestantes === 0;
         return `
           <tr class="hover:bg-slate-50 transition-colors">
-            <td class="p-2.5 font-bold text-slate-800">${o.nombre}</td>
+            <td class="p-2.5 font-bold text-slate-800 break-all">${o.nombre}</td>
             <td class="p-2.5">${o.provincia}</td>
-            <td class="p-2.5 text-slate-700">${getUserDisplayName(o.tecnicoId)}</td>
+            <td class="p-2.5 text-slate-700 font-semibold">${getUserDisplayName(o.tecnicoId)}</td>
             <td class="p-2.5 text-right font-semibold">${o.recintosTotales}</td>
             <td class="p-2.5 text-right font-bold ${isDone ? 'text-[#2c371b]' : 'text-amber-700'}">${o.recintosRestantes}</td>
             <td class="p-2.5 text-center">
@@ -1716,8 +3361,8 @@
               </span>
             </td>
             <td class="p-2.5 text-center space-x-1">
-              <button onclick="openEditOTModal('${o.id}')" class="p-1 text-slate-500 hover:text-[#728157] transition"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
-              <button onclick="deleteOT('${o.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+              <button onclick="openEditOTModal('${o.id}')" class="p-1 text-slate-500 hover:text-[#728157] transition" title="Editar"><i data-lucide="edit-3" class="w-3.5 h-3.5"></i></button>
+              <button onclick="deleteOT('${o.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition" title="Eliminar"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
             </td>
           </tr>
         `;
@@ -1770,61 +3415,6 @@
       }
     };
 
-    document.getElementById('form-campaign').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const provBreakdown = {
-        Albacete: parseInt(document.getElementById('c-alb').value) || 0,
-        'Ciudad Real': parseInt(document.getElementById('c-cr').value) || 0,
-        Cuenca: parseInt(document.getElementById('c-cu').value) || 0,
-        Guadalajara: parseInt(document.getElementById('c-gu').value) || 0,
-        Toledo: parseInt(document.getElementById('c-to').value) || 0
-      };
-      const total = Object.values(provBreakdown).reduce((a, b) => a + b, 0);
-
-      try {
-        await addDoc(collection(db, "campaigns"), {
-          nombre: document.getElementById('camp-name').value,
-          provBreakdown,
-          recintosTotales: total,
-          fechaInicio: new Date().toISOString()
-        });
-        document.getElementById('camp-name').value = '';
-        alert("Planificación guardada.");
-      } catch (error) {
-        alert("Error: " + error.message);
-      }
-    });
-
-    window.renderCampTable = () => {
-      const tbody = document.getElementById('camp-table-body');
-      if (!tbody) return;
-      tbody.innerHTML = campaigns.map(c => {
-        const pb = c.provBreakdown || {};
-        const total = c.recintosTotales || 0;
-        return `
-          <tr class="hover:bg-slate-50 transition-colors">
-            <td class="p-2.5 font-bold text-slate-800">${c.nombre}</td>
-            <td class="p-2.5 text-right text-slate-600">${pb.Albacete || 0}</td>
-            <td class="p-2.5 text-right text-slate-600">${pb['Ciudad Real'] || 0}</td>
-            <td class="p-2.5 text-right text-slate-600">${pb.Cuenca || 0}</td>
-            <td class="p-2.5 text-right text-slate-600">${pb.Guadalajara || 0}</td>
-            <td class="p-2.5 text-right text-slate-600">${pb.Toledo || 0}</td>
-            <td class="p-2.5 text-right font-black text-[#202715]">${total}</td>
-            <td class="p-2.5 text-center">
-              <button onclick="deleteCampaign('${c.id}')" class="p-1 text-slate-500 hover:text-rose-700 transition"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-      lucide.createIcons();
-    };
-
-    window.deleteCampaign = async (campId) => {
-      if (confirm("¿Eliminar planificación?")) {
-        await deleteDoc(doc(db, "campaigns", campId));
-      }
-    };
-
     function renderUsersTable() {
       const tbody = document.getElementById('users-table-body');
       if (!tbody) return;
@@ -1833,7 +3423,7 @@
           <td class="p-2.5 font-medium text-slate-700 truncate max-w-[120px]">${u.email}</td>
           <td class="p-2.5 font-bold text-slate-800">${u.alias || '-'}</td>
           <td class="p-2.5 text-center"><span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${u.role === 'gestor' ? 'bg-[#d2daba] text-[#2c371b]' : 'bg-slate-100 text-slate-700'}">${(u.role || 'tecnico').toUpperCase()}</span></td>
-          <td class="p-2.5 text-center"><button onclick="editUserAlias('${u.id}', '${u.alias || ''}')" class="px-2 py-0.5 bg-white text-[#2c371b] text-[10px] font-bold rounded shadow-xs hover:bg-slate-100 transition">Editar</button></td>
+          <td class="p-2.5 text-center"><button onclick="editUserAlias('${u.id}', '${u.alias || ''}')" class="px-2.5 py-0.5 bg-white text-[#2c371b] text-[10px] font-bold rounded shadow-xs hover:bg-slate-100 transition">Editar</button></td>
         </tr>
       `).join('');
     }
@@ -1845,75 +3435,36 @@
       await updateDoc(doc(db, "users", userId), { alias: newAlias.trim(), role: newRole });
     };
 
-    function renderGestorReports() {
-      const provs = ['Albacete', 'Ciudad Real', 'Cuenca', 'Guadalajara', 'Toledo'];
-      let totCtrl = 0, totRev = 0, totPend = 0;
-      const tbody = document.getElementById('cst-table-body');
-      if (!tbody) return;
-
-      tbody.innerHTML = provs.map(p => {
-        const ots = workOrders.filter(o => o.provincia === p);
-        const ctrl = ots.reduce((a, b) => a + (b.recintosTotales || 0), 0);
-        const pend = ots.reduce((a, b) => a + (b.recintosRestantes || 0), 0);
-        const rev = ctrl - pend;
-        const pct = ctrl ? ((rev / ctrl) * 100).toFixed(1) : '0.0';
-
-        totCtrl += ctrl; totRev += rev; totPend += pend;
-
-        return `
-          <tr class="hover:bg-slate-50 transition-colors">
-            <td class="p-2.5 font-bold text-slate-800">${p}</td>
-            <td class="p-2.5 text-right">${ctrl}</td>
-            <td class="p-2.5 text-right font-bold text-[#2c371b]">${rev}</td>
-            <td class="p-2.5 text-right font-bold text-amber-800">${pend}</td>
-            <td class="p-2.5 text-right font-black">${pct}%</td>
-          </tr>
-        `;
-      }).join('');
-
-      document.getElementById('kpi-tot').innerText = totCtrl;
-      document.getElementById('kpi-rev').innerText = totRev;
-      document.getElementById('kpi-pen').innerText = totPend;
-      document.getElementById('kpi-pct').innerText = totCtrl ? `${((totRev / totCtrl) * 100).toFixed(1)}%` : '0%';
-    }
-
-    window.calcCampTotal = () => {
-      const sum = ['c-alb', 'c-cr', 'c-cu', 'c-gu', 'c-to'].reduce((a, id) => a + (parseInt(document.getElementById(id).value) || 0), 0);
-      document.getElementById('camp-total-sum').innerText = `${sum} Recintos`;
-    };
-
     window.switchGestorSubTab = (tab) => {
       document.getElementById('subtab-ots').classList.toggle('hidden', tab !== 'ots');
-      document.getElementById('subtab-plan').classList.toggle('hidden', tab !== 'plan');
-      document.getElementById('subtab-users').classList.toggle('hidden', tab !== 'users');
+      document.getElementById('subtab-ras').classList.toggle('hidden', tab !== 'ras');
       document.getElementById('subtab-rep').classList.toggle('hidden', tab !== 'rep');
+      document.getElementById('subtab-import').classList.toggle('hidden', tab !== 'import');
+      document.getElementById('subtab-users').classList.toggle('hidden', tab !== 'users');
+      document.getElementById('subtab-settings').classList.toggle('hidden', tab !== 'settings');
 
       const btnOTs = document.getElementById('tab-btn-ots');
-      const btnPlan = document.getElementById('tab-btn-plan');
-      const btnUsers = document.getElementById('tab-btn-users');
+      const btnRas = document.getElementById('tab-btn-ras');
       const btnRep = document.getElementById('tab-btn-rep');
+      const btnImport = document.getElementById('tab-btn-import');
+      const btnUsers = document.getElementById('tab-btn-users');
+      const btnSettings = document.getElementById('tab-btn-settings');
 
       const activeClass = "px-3 py-2 font-bold border-b-2 border-main-primary text-[#242c17] whitespace-nowrap";
       const inactiveClass = "px-3 py-2 font-medium text-slate-500 whitespace-nowrap hover:text-[#242c17]";
 
       btnOTs.className = tab === 'ots' ? activeClass : inactiveClass;
-      btnPlan.className = tab === 'plan' ? activeClass : inactiveClass;
+      if (btnRas) btnRas.className = (tab === 'ras' ? activeClass : inactiveClass) + " flex items-center gap-1.5";
+      if (btnRep) btnRep.className = (tab === 'rep' ? activeClass : inactiveClass) + " flex items-center gap-1.5";
+      if (btnImport) btnImport.className = (tab === 'import' ? activeClass : inactiveClass) + " flex items-center gap-1";
       btnUsers.className = tab === 'users' ? activeClass : inactiveClass;
-      btnRep.className = tab === 'rep' ? activeClass : inactiveClass;
+      if (btnSettings) btnSettings.className = (tab === 'settings' ? activeClass : inactiveClass) + " flex items-center gap-1";
 
       if (tab === 'ots') renderOTTable();
-      if (tab === 'plan') renderCampTable();
+      if (tab === 'ras') renderGestorRASReports();
+      if (tab === 'rep') renderGestorStatistics();
       if (tab === 'users') renderUsersTable();
-      if (tab === 'rep') renderGestorReports();
-    };
-
-    window.filterOTOptions = () => {
-      const text = document.getElementById('ot-search-input').value.toLowerCase();
-      const select = document.getElementById('ot-select');
-      Array.from(select.options).forEach(opt => {
-        if (!opt.value) return;
-        opt.style.display = opt.innerText.toLowerCase().includes(text) ? '' : 'none';
-      });
+      if (tab === 'settings') populateEmailSettingsInputs();
     };
   </script>
 </body>
