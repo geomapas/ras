@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prueba de compartir</title>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <style>
     body { font-family: system-ui, sans-serif; margin: 0; padding: 16px; background: #F4F6F0; color: #1e2513; }
     h1 { font-size: 18px; margin: 0 0 4px; }
@@ -17,14 +18,15 @@
   </style>
 </head>
 <body>
-  <h1>Prueba de compartir (temporal)</h1>
+  <h1>Prueba de compartir 2 (temporal)</h1>
   <p>Pulsa cada botón por separado y dime cuáles funcionan (se abre el menú) y cuáles dan error. Al terminar, copia o haz captura del recuadro de resultados.</p>
 
-  <button id="b1" disabled>1. Compartir solo TEXTO</button>
-  <button id="b2" disabled>2. Compartir archivo .TXT</button>
-  <button id="b3" disabled>3. Compartir imagen .PNG</button>
-  <button id="b4" disabled>4. Compartir .XLSX (solo archivo)</button>
-  <button id="b5" disabled>5. Compartir .XLSX + título y texto</button>
+  <button id="b1" disabled>A. XLSX con tipo "octet-stream"</button>
+  <button id="b2" disabled>B. XLSX sin tipo declarado</button>
+  <button id="b3" disabled>C. Mismo Excel con nombre .xls</button>
+  <button id="b4" disabled>D. Excel dentro de un .ZIP</button>
+  <button id="b5" disabled>E. Archivo .CSV</button>
+  <button id="b6" disabled>F. Archivo .PDF</button>
 
   <p class="info" id="info"></p>
   <pre id="log">Resultados:
@@ -62,26 +64,6 @@
     b.addEventListener('click', handler);
   }
 
-  // 1. Texto
-  enable('b1', () => runShare('1 texto', { title: 'Prueba', text: 'Hola, esto es una prueba de compartir.' }));
-
-  // 2. TXT
-  files.txt = new File(["Hola, prueba de archivo de texto."], "prueba.txt", { type: "text/plain" });
-  enable('b2', () => runShare('2 txt', { files: [files.txt] }));
-
-  // 3. PNG (se genera con un canvas)
-  (function () {
-    const c = document.createElement('canvas');
-    c.width = 64; c.height = 64;
-    const ctx = c.getContext('2d');
-    ctx.fillStyle = '#43522f'; ctx.fillRect(0, 0, 64, 64);
-    c.toBlob(blob => {
-      files.png = new File([blob], "prueba.png", { type: "image/png" });
-      enable('b3', () => runShare('3 png', { files: [files.png] }));
-    }, 'image/png');
-  })();
-
-  // 4 y 5. XLSX mínimo (sin plantilla) generado con ExcelJS
   (async function () {
     try {
       const wb = new ExcelJS.Workbook();
@@ -89,14 +71,38 @@
       ws.getCell('A1').value = 'Hola';
       ws.getCell('B1').value = 123;
       const buf = await wb.xlsx.writeBuffer();
-      files.xlsx = new File([buf], "prueba.xlsx", { type: XLSX_MIME });
-      enable('b4', () => runShare('4 xlsx', { files: [files.xlsx] }));
-      enable('b5', () => runShare('5 xlsx+texto', { files: [files.xlsx], title: 'RAS prueba', text: 'Adjunto el RAS' }));
-      say("Excel de prueba listo (" + files.xlsx.size + " bytes)");
+      say("Excel de prueba listo (" + buf.byteLength + " bytes)");
+
+      files.a = new File([buf], "prueba.xlsx", { type: "application/octet-stream" });
+      enable('b1', () => runShare('A xlsx octet-stream', { files: [files.a] }));
+
+      files.b = new File([buf], "prueba.xlsx", { type: "" });
+      enable('b2', () => runShare('B xlsx sin tipo', { files: [files.b] }));
+
+      files.c = new File([buf], "prueba.xls", { type: "application/vnd.ms-excel" });
+      enable('b3', () => runShare('C .xls', { files: [files.c] }));
+
+      if (window.JSZip) {
+        const zip = new JSZip();
+        zip.file("prueba.xlsx", buf);
+        const zbuf = await zip.generateAsync({ type: "uint8array" });
+        files.d = new File([zbuf], "prueba.zip", { type: "application/zip" });
+        enable('b4', () => runShare('D zip', { files: [files.d] }));
+      } else {
+        say("JSZip no se pudo cargar: el botón D no está disponible");
+      }
     } catch (e) {
       say("No se pudo crear el Excel de prueba: " + e.message);
     }
   })();
+
+  files.e = new File(["col1;col2\nHola;123\n"], "prueba.csv", { type: "text/csv" });
+  enable('b5', () => runShare('E csv', { files: [files.e] }));
+
+  const pdfTxt = "%PDF-1.1\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 200 200]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF";
+  files.f = new File([pdfTxt], "prueba.pdf", { type: "application/pdf" });
+  enable('b6', () => runShare('F pdf', { files: [files.f] }));
+
 </script>
 </body>
 </html>
